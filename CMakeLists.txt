@@ -5,17 +5,17 @@ if(POLICY CMP0020)
   cmake_policy(SET CMP0071 NEW)
 endif()
 
-PROJECT(BorderWidgetQt)
+PROJECT(volumeVisualization)
 
 find_package(VTK REQUIRED
 )
 
 if(NOT VTK_FOUND)
-  message(FATAL_ERROR "BorderWidgetQt: ${VTK_NOT_FOUND_MESSAGE}")
+  message(FATAL_ERROR "volumeVisualization: ${VTK_NOT_FOUND_MESSAGE}")
 endif()
 
 if(NOT(vtkGUISupportQt_LOADED OR TARGET VTK::GUISupportQt))
-  message(FATAL_ERROR "BorderWidgetQt: VTK not built with Qt support.")
+  message(FATAL_ERROR "volumeVisualization: VTK not built with Qt support.")
 endif()
 
 if(NOT DEFINED VTK_QT_VERSION)
@@ -67,27 +67,27 @@ if (VTK_VERSION VERSION_LESS "8.90.0")
   # old system
   include(${VTK_USE_FILE})
   # CMAKE_AUTOMOC in ON so the MOC headers will be automatically wrapped.
-  add_executable(BorderWidgetQt MACOSX_BUNDLE
+  add_executable(volumeVisualization MACOSX_BUNDLE
     ${CXX_FILES} ${UISrcs} ${QT_WRAP})
   if (Qt${VTK_QT_VERSION}Widgets_VERSION VERSION_LESS "5.11.0")
-    qt5_use_modules(BorderWidgetQt ${qt_components})
+    qt5_use_modules(volumeVisualization ${qt_components})
   else()
-    target_link_libraries(BorderWidgetQt ${qt_modules})
+    target_link_libraries(volumeVisualization ${qt_modules})
   endif()
-  target_link_libraries(BorderWidgetQt ${VTK_LIBRARIES})
+  target_link_libraries(volumeVisualization ${VTK_LIBRARIES})
 else()
   # CMAKE_AUTOMOC in ON so the MOC headers will be automatically wrapped.
-  add_executable(BorderWidgetQt MACOSX_BUNDLE
+  add_executable(volumeVisualization MACOSX_BUNDLE
     ${CXX_FILES} ${UISrcs} ${QT_WRAP})
   if (Qt${VTK_QT_VERSION}Widgets_VERSION VERSION_LESS "5.11.0")
-    qt5_use_modules(BorderWidgetQt ${qt_components})
+    qt5_use_modules(volumeVisualization ${qt_components})
   else()
-    target_link_libraries(BorderWidgetQt ${qt_modules})
+    target_link_libraries(volumeVisualization ${qt_modules})
   endif()
-  target_link_libraries(BorderWidgetQt ${VTK_LIBRARIES})
+  target_link_libraries(volumeVisualization ${VTK_LIBRARIES})
   # vtk_module_autoinit is needed
   vtk_module_autoinit(
-    TARGETS BorderWidgetQt
+    TARGETS volumeVisualization
     MODULES ${VTK_LIBRARIES}
   )
 endif()
