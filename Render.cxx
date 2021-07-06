@@ -30,14 +30,18 @@ Render::Render(char *argv){
 
   vtkNew<vtkPiecewiseFunction> opacityTransferFunction;
   opacityTransferFunction->AddPoint(499, 0.0);
-  opacityTransferFunction->AddPoint(500, 0.2);
-  opacityTransferFunction->AddPoint(1150, 0.5);
+  opacityTransferFunction->AddPoint(500, 1.);
+  opacityTransferFunction->AddPoint(1150, 1.);
+  opacityTransferFunction->AddPoint(1900, 1.);
 
   // Create transfer mapping scalar value to color
   vtkNew<vtkColorTransferFunction> colorTransferFunction;
-  colorTransferFunction->AddRGBPoint(1150.0, colors->GetColor3d("ivory").GetData()[0],
+  colorTransferFunction->AddRGBPoint(1900.0, colors->GetColor3d("ivory").GetData()[0],
                                             colors->GetColor3d("ivory").GetData()[1],
                                             colors->GetColor3d("ivory").GetData()[2]);
+  colorTransferFunction->AddRGBPoint(1150, colors->GetColor3d("lblue").GetData()[0],
+                                            colors->GetColor3d("blue").GetData()[1],
+                                            colors->GetColor3d("blue").GetData()[2]);
   colorTransferFunction->AddRGBPoint(500.0, colors->GetColor3d("flesh").GetData()[0],
                                             colors->GetColor3d("flesh").GetData()[1],
                                             colors->GetColor3d("flesh").GetData()[2]);
