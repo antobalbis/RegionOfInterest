@@ -24,6 +24,7 @@ private:
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
     vtkSmartPointer<vtkImageShrink3D> shrink;
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
+    Render render;
     Ui::gui *ui;
 };
 #endif // GUI_H

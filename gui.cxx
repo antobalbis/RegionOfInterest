@@ -23,7 +23,6 @@ class vtkMyCallback : public vtkCommand
     }
 
     double* object_bounds = new double[6];
-    vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> mapper;
     double* l_bounds = new double[6];
     bool init = false;
 
@@ -84,11 +83,9 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
       return new KeyPressInteractionStyle;
     }
     vtkTypeMacro(KeyPressInteractionStyle, vtkInteractorStyleTrackballCamera);
-    vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> mapper;
-    vtkSmartPointer<vtkImageShrink3D> shrink;
     vtkSmartPointer<vtkMyCallback> callback;
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
-    vtkSmartPointer<vtkPolyData> octreeRepresentation;
+    Render render;
     int num_cells;
 
     virtual void OnKeyPress(){
@@ -100,44 +97,22 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
         double* bounds = callback->GetBounds();
 
         if(bounds[1] > bounds[0] && bounds[3] > bounds[2] && bounds[5] > bounds[4]){
-          double minBounds[3] = {bounds[0], bounds[2], bounds[4]};
-          double maxBounds[3] = {bounds[1], bounds[3], bounds[5]};
-          double minPoint[3];
-          double maxPoint[3];
 
-          shrink->GetOutput()->TransformPhysicalPointToContinuousIndex(minBounds, minPoint);
-          shrink->GetOutput()->TransformPhysicalPointToContinuousIndex(maxBounds, maxPoint);
-
-          std::cout << minPoint[0] << " " << minPoint[1] << " " << minPoint[2] << endl;
-          std::cout << maxPoint[0] << " " << maxPoint[1] << " " << maxPoint[2] << endl;
-
-          vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
-          voi->SetInputConnection(shrink->GetOutputPort());
-          voi->SetVOI((int) minPoint[0], (int) maxPoint[0], (int) minPoint[1], (int) maxPoint[1], (int) minPoint[2], (int) maxPoint[2]);
-          voi->Update();
-
-          mapper->SetInputConnection(voi->GetOutputPort());
-
-          //boxWidget->GetRepresentation()->SetPlaceFactor(1);
-          //boxWidget->GetRepresentation()->PlaceWidget(mapper->GetBounds());
+          render.extractSelectedVOI(bounds, false);
         }
       }
-    }
-
-    void SetMapper(vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> mapper){
-      this->mapper = mapper;
     }
 
     void SetBoxWidget(vtkSmartPointer<vtkBoxWidget2> boxWidget){
       this->boxWidget = boxWidget;
     }
 
-    void SetShrink(vtkSmartPointer<vtkImageShrink3D> shrink){
-      this->shrink = shrink;
-    }
-
     void SetCallback(vtkSmartPointer<vtkMyCallback> callback){
       this->callback = callback;
+    }
+
+    void SetRender(Render render){
+      this->render = render;
     }
 };
 
@@ -148,7 +123,7 @@ gui::gui(QWidget *parent)
 {
     ui->setupUi(this);
 
-    Render render = Render("../flower/flower_uint.raw");
+    render = Render("../flower/flower_uint.raw");
     volumeMapper = render.getVolumeMapper();
     shrink = render.getImage();
 
@@ -161,9 +136,8 @@ gui::gui(QWidget *parent)
     this->ui->qvtkWidget->setRenderWindow(renWin);
 
     vtkNew<KeyPressInteractionStyle> key;
-    key->SetMapper(volumeMapper);
-    key->SetShrink(shrink);
     key->SetCurrentRenderer(ren1);
+    key->SetRender(render);
 
     vtkNew<vtkPolyDataMapper> octreeMapper;
     octreeMapper->SetInputData(render.getOctreeRepresentation());
@@ -240,15 +214,8 @@ void gui::handleButton(){
   if(depth > dims[5]) depth = dims[5];
 
   if(initI < length && initJ < width && initK < depth){
-    vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
-    voi->SetInputConnection(shrink->GetOutputPort());
-    voi->SetVOI(initI, length, initJ, width, initK, depth);
-    voi->Update();
-    volumeMapper->SetInputConnection(voi->GetOutputPort());
-
-    boxWidget->GetRepresentation()->SetPlaceFactor(1);
-    boxWidget->GetRepresentation()->PlaceWidget(volumeMapper->GetBounds());
-
+    double bounds[6] = {initI, length, initJ, width, initK, depth};
+    render.extractSelectedVOI(bounds, true);
   }
 
   std::cout << initI << " " << initJ << " " << initK << endl;

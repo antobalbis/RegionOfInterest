@@ -51,13 +51,16 @@ class Render{
     void readDataFromFile(char* path, int x_dim, int y_dim, int z_dim);
     void deleteOutsideRegion();
     void fixImage();
+    vtkSmartPointer<vtkExtractVOI> extractVOI(double bounds[6]);
 
   public:
+    Render();
     Render(char *argv);
 	  void graphicPipeline();
 	  void getRegionOfInterest(int bounds[6]);
     void fixDataBounds(double bounds[6]);
     void clipImage(double bounds[6]);
+    void extractSelectedVOI(double bounds[6], bool localBounds);
     vtkSmartPointer<vtkImageShrink3D> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
     vtkSmartPointer<vtkVolume> getVolume();

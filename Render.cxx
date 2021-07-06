@@ -16,6 +16,7 @@
 #include <vtkImageAppend.h>
 #include "Render.h"
 
+Render::Render(){}
 Render::Render(char *argv){
   //create volume reader
   std::cout << argv << endl;
@@ -67,18 +68,13 @@ Render::Render(char *argv){
   octree->SetMaxLevel(4);
   octree->BuildLocator();
   octreeRepresentation = vtkSmartPointer<vtkPolyData>::New();
-  octree->GenerateRepresentation(4, octreeRepresentation);
+  octree->GenerateRepresentation(3, octreeRepresentation);
 
   //vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
   volumeMapper = vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper>::New();
 
   polyMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   polyMapper->SetInputConnection(normals->GetOutputPort());
-
-  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
-  shrink->SetInputData(original);
-  shrink->SetShrinkFactors(1, 1, 1);
-  shrink->Update();
 
   //volumeMapper->SetInputConnection(accumulator->GetOutputPort());
   //volumeMapper->SetInputConnection(shrink->GetOutputPort());
@@ -106,6 +102,11 @@ void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_
   reader->SetFilePrefix("../headsq/quarter");
   reader->SetDataSpacing (3.2, 3.2, 1.5);
 
+  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
+  shrink->SetInputConnection(reader->GetOutputPort());
+  shrink->SetShrinkFactors(1, 1, 1);
+  shrink->Update();
+
   original = reader->GetOutput();
 }
 
@@ -121,7 +122,13 @@ void Render::readDataFromFile(char* path, int x_dim, int y_dim, int z_dim){
   reader->SetFileName(path);
   reader->SetDataSpacing (1., 1., 1.);
 
-  original = reader->GetOutput();}
+  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
+  shrink->SetInputConnection(reader->GetOutputPort());
+  shrink->SetShrinkFactors(1, 1, 1);
+  shrink->Update();
+
+  original = reader->GetOutput();
+}
 
 void Render::fixImage(){
   octreeRepresentation->ComputeBounds();
@@ -141,6 +148,37 @@ void Render::fixImage(){
 
   shrink2->SetInputConnection(voi->GetOutputPort());
   shrink2->Update();
+}
+
+void Render::extractSelectedVOI(double bounds[6], bool localBounds){
+  if(!localBounds){
+    double minBounds[3] = {bounds[0], bounds[2], bounds[4]};
+    double maxBounds[3] = {bounds[1], bounds[3], bounds[5]};
+    double minPoint[3];
+    double maxPoint[3];
+
+    original->TransformPhysicalPointToContinuousIndex(minBounds, minPoint);
+    original->TransformPhysicalPointToContinuousIndex(maxBounds, maxPoint);
+
+    bounds[0] = minPoint[0];
+    bounds[1] = maxPoint[0];
+    bounds[2] = minPoint[1];
+    bounds[3] = maxPoint[1];
+    bounds[4] = minPoint[2];
+    bounds[5] = maxPoint[2];
+
+    std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
+  }
+  volumeMapper->SetInputConnection(extractVOI(bounds)->GetOutputPort());
+}
+
+vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6]){
+  vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
+  voi->SetInputData(original);
+  voi->SetVOI((int) bounds[0], (int) bounds[1], (int) bounds[2], (int) bounds[3], (int) bounds[4], (int) bounds[5]);
+  voi->Update();
+
+  return voi;
 }
 
 void Render::deleteOutsideRegion(){
