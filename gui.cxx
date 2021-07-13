@@ -91,16 +91,34 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     virtual void OnKeyPress(){
       vtkRenderWindowInteractor* interactor = this->Interactor;
       std::string key = interactor->GetKeySym();
+      double* bounds = callback->GetBounds();
 
       if(key == "j"){
         std::cout << "SE HA PULSADO?? " << key << endl;
-        double* bounds = callback->GetBounds();
 
         if(bounds[1] > bounds[0] && bounds[3] > bounds[2] && bounds[5] > bounds[4]){
 
           render.extractSelectedVOI(bounds, false);
         }
       }
+      else if(key == "s"){
+        double radius[1] = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
+        std::cout << radius[0] << endl;
+        double center[3];
+        center[0] = (bounds[1] + bounds[0])/2;
+        center[1] = (bounds[3] + bounds[2])/2;
+        center[2] = (bounds[5] + bounds[4])/2;
+        render.extractFormedVOI(0, radius, center);
+      }
+      else if(key == "r"){
+        render.restart();
+      }
+    }
+
+    double getMin(double x, double y, double z){
+      if(x < y && x < z) return x;
+      else if(y < z) return y;
+      else return z;
     }
 
     void SetBoxWidget(vtkSmartPointer<vtkBoxWidget2> boxWidget){
@@ -123,7 +141,9 @@ gui::gui(QWidget *parent)
 {
     ui->setupUi(this);
 
-    render = Render("../flower/flower_uint.raw");
+    double spacing[3] = {3.2, 3.2, 1.5};
+    int dims[3] = {64, 64, 93};
+    render = Render("../headsq/quarter", spacing, dims);
     volumeMapper = render.getVolumeMapper();
     shrink = render.getImage();
 
@@ -161,8 +181,8 @@ gui::gui(QWidget *parent)
     );
 
     ren1->AddVolume(render.getVolume());
-    ren1->AddActor(polyActor);
-    ren1->AddActor(octreeActor);
+    //ren1->AddActor(polyActor);
+    //ren1->AddActor(octreeActor);
     ren1->SetBackground(colors->GetColor3d("Wheat").GetData());
     ren1->GetActiveCamera()->Azimuth(45);
     ren1->GetActiveCamera()->Elevation(30);
