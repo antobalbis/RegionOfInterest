@@ -5,3 +5,5 @@ src/
 include/
 objects/
 build/
+beetle/
+docs/
