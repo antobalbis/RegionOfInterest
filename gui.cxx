@@ -144,8 +144,6 @@ gui::gui(QWidget *parent)
     double spacing[3] = {3.2, 3.2, 1.5};
     int dims[3] = {64, 64, 93};
     render = Render("../headsq/quarter", spacing, dims);
-    volumeMapper = render.getVolumeMapper();
-    shrink = render.getImage();
 
     vtkNew<vtkNamedColors> colors;
     vtkNew<vtkRenderer> ren1;
@@ -225,7 +223,7 @@ void gui::handleButton(){
   double width = std::stod(this->ui->widthText->toPlainText().toUtf8().constData());
   double depth = std::stod(this->ui->depthText->toPlainText().toUtf8().constData());
 
-  int* dims = shrink->GetOutput()->GetExtent();
+  int* dims = render.getImage()->GetExtent();
   if(initI < dims[0]) initI = dims[0];
   if(initJ < dims[2]) initJ = dims[2];
   if(initK < dims[4]) initK = dims[4];

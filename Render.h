@@ -54,8 +54,8 @@ class Render{
     void readDICOMImage(char* path, int x_dim, int y_dim, int z_dim, int z_init);
     void readNrrdImage(char* path);
     void deleteOutsideRegion();
-    void fixImage();
-    vtkSmartPointer<vtkExtractVOI> extractVOI(double bounds[6]);
+    vtkSmartPointer<vtkExtractVOI> fixImage();
+    vtkSmartPointer<vtkExtractVOI> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
     void extractCone();
     void extractSphere(double radius, double* center);
 
@@ -69,7 +69,7 @@ class Render{
     void extractSelectedVOI(double bounds[6], bool localBounds);
     void extractFormedVOI(int type, double* bounds, double* center);
     void restart();
-    vtkSmartPointer<vtkImageShrink3D> getImage();
+    vtkSmartPointer<vtkImageData> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
     vtkSmartPointer<vtkVolume> getVolume();
     vtkSmartPointer<vtkPolyData> getOctreeRepresentation();
