@@ -103,7 +103,6 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   octree->GenerateRepresentation(4, octreeRepresentation);
 
   vtkSmartPointer<vtkExtractVOI> voi = fixImage();
-  std::cout << "IT'S OK???" << endl;
 
   vtkNew<vtkPolyDataToImageStencil> stencilImage;
   stencilImage->SetInputData(octreeRepresentation);
@@ -118,8 +117,8 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   stencil->SetBackgroundValue(0);
   stencil->Update();
 
-  original = stencil->GetOutput();
-  current = stencil->GetOutput();
+  original = voi->GetOutput();
+  current = voi->GetOutput();
 
   std::cout << "STENCIL: " << stencil->GetOutput()->GetActualMemorySize() << endl;
   std::cout << "VOLUME: " << shrink->GetOutput()->GetActualMemorySize() << endl;
@@ -130,7 +129,7 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   //volumeMapper->SetMaskInput(threshold->GetOutput());
   //volumeMapper->SetInputConnection(accumulator->GetOutputPort());
   //volumeMapper->SetInputConnection(shrink->GetOutputPort());
-  volumeMapper->SetInputConnection(stencil->GetOutputPort());
+  volumeMapper->SetInputConnection(voi->GetOutputPort());
   //volumeMapper->SetPartitions(10,10,10);
   //volumeMapper->SetInputData(image);
 
@@ -225,6 +224,7 @@ vtkSmartPointer<vtkExtractVOI> Render::fixImage(){
 }
 
 void Render::extractSelectedVOI(double bounds[6], bool localBounds){
+  double _bounds[6];
   if(!localBounds){
     double minBounds[3] = {bounds[0], bounds[2], bounds[4]};
     double maxBounds[3] = {bounds[1], bounds[3], bounds[5]};
@@ -234,16 +234,24 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
     original->TransformPhysicalPointToContinuousIndex(minBounds, minPoint);
     original->TransformPhysicalPointToContinuousIndex(maxBounds, maxPoint);
 
-    bounds[0] = minPoint[0];
-    bounds[1] = maxPoint[0];
-    bounds[2] = minPoint[1];
-    bounds[3] = maxPoint[1];
-    bounds[4] = minPoint[2];
-    bounds[5] = maxPoint[2];
+    _bounds[0] = minPoint[0];
+    _bounds[1] = maxPoint[0];
+    _bounds[2] = minPoint[1];
+    _bounds[3] = maxPoint[1];
+    _bounds[4] = minPoint[2];
+    _bounds[5] = maxPoint[2];
 
     std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
+  }else{
+    _bounds[0] = bounds[0];
+    _bounds[1] = bounds[1];
+    _bounds[2] = bounds[2];
+    _bounds[3] = bounds[3];
+    _bounds[4] = bounds[4];
+    _bounds[5] = bounds[5];
   }
-  vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds, current);
+
+  vtkSmartPointer<vtkExtractVOI> voi = extractVOI(_bounds, current);
   current = voi->GetOutput();
   volumeMapper->SetInputConnection(voi->GetOutputPort());
 }
@@ -275,19 +283,33 @@ vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPoin
   }
 }*/
 
-void Render::extractFormedVOI(int type, double* bounds, double* center){
+void Render::extractFormedVOI(int type, double* bounds, double* center, vtkSmartPointer<vtkAbstractTransform> transform){
   extractSphere(bounds[0], center);
 }
 
 void Render::extractSphere(double radius, double *center){
-  vtkNew<vtkSphere> sphere;
+  vtkSmartPointer<vtkSphere> sphere = vtkSmartPointer<vtkSphere>::New();
   sphere->SetCenter(center);
   sphere->SetRadius(radius);
 
+  doExtraction(sphere);
+}
+
+void Render::extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform){
+  vtkSmartPointer<vtkBox> box = vtkSmartPointer<vtkBox>::New();
+  box->SetBounds(bounds);
+  if(transform != NULL) box->SetTransform(transform);
+
+  doExtraction(box);
+}
+
+void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function){
   vtkNew<vtkCutter> clipVolume;
-  clipVolume->SetCutFunction(sphere);
+  clipVolume->SetCutFunction(function);
   clipVolume->SetInputData(current);
   clipVolume->Update();
+
+  double *bounds = clipVolume->GetOutput()->GetBounds();
 
   vtkNew<vtkPolyDataToImageStencil> stencilImage;
   stencilImage->SetInputData(clipVolume->GetOutput());
