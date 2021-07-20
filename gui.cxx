@@ -1,6 +1,5 @@
 #include "gui.h"
 #include "ui_gui.h"
-
 #include <vtkBorderWidget.h>
 #include <vtkCommand.h>
 #include <vtkGenericOpenGLRenderWindow.h>
@@ -85,6 +84,7 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     vtkTypeMacro(KeyPressInteractionStyle, vtkInteractorStyleTrackballCamera);
     vtkSmartPointer<vtkMyCallback> callback;
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
     Render render;
     int num_cells;
 
@@ -97,7 +97,6 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
         std::cout << "SE HA PULSADO?? " << key << endl;
 
         if(bounds[1] > bounds[0] && bounds[3] > bounds[2] && bounds[5] > bounds[4]){
-
           render.extractSelectedVOI(bounds, false);
         }
       }
@@ -108,11 +107,12 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
         center[0] = (bounds[1] + bounds[0])/2;
         center[1] = (bounds[3] + bounds[2])/2;
         center[2] = (bounds[5] + bounds[4])/2;
-        render.extractFormedVOI(0, radius, center);
+        render.extractFormedVOI(0, radius, center, nullptr);
       }
       else if(key == "r"){
         render.restart();
       }
+      renWin->Render();
     }
 
     double getMin(double x, double y, double z){
@@ -132,6 +132,10 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     void SetRender(Render render){
       this->render = render;
     }
+
+    void SetRenWin(vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin){
+      this->renWin = renWin;
+    }
 };
 
 
@@ -141,26 +145,20 @@ gui::gui(QWidget *parent)
 {
     ui->setupUi(this);
 
-    double spacing[3] = {3.2, 3.2, 1.5};
-    int dims[3] = {64, 64, 93};
-    render = Render("../headsq/quarter", spacing, dims);
+    //render = Render("../headsq/quarter", spacing, dims);
 
     vtkNew<vtkNamedColors> colors;
-    vtkNew<vtkRenderer> ren1;
+    renderer = vtkSmartPointer<vtkRenderer>::New();
 
-    vtkNew<vtkGenericOpenGLRenderWindow> renWin;
-    renWin->AddRenderer(ren1);
+    renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+    renWin->AddRenderer(renderer);
 
     this->ui->qvtkWidget->setRenderWindow(renWin);
 
-    vtkNew<KeyPressInteractionStyle> key;
-    key->SetCurrentRenderer(ren1);
-    key->SetRender(render);
+    //vtkNew<vtkPolyDataMapper> octreeMapper;
+    //octreeMapper->SetInputData(render.getOctreeRepresentation());
 
-    vtkNew<vtkPolyDataMapper> octreeMapper;
-    octreeMapper->SetInputData(render.getOctreeRepresentation());
-
-    vtkNew<vtkActor> octreeActor;
+    /*vtkNew<vtkActor> octreeActor;
     octreeActor->SetMapper(octreeMapper);
     octreeActor->GetProperty()->SetInterpolationToFlat();
     octreeActor->GetProperty()->SetRepresentationToWireframe();
@@ -168,50 +166,29 @@ gui::gui(QWidget *parent)
     octreeActor->GetProperty()->EdgeVisibilityOn();
     octreeActor->GetProperty()->SetColor(
       colors->GetColor4d("SpringGreen").GetData()
-    );
+    );*/
 
-    vtkNew<vtkActor> polyActor;
-    polyActor->SetMapper(render.getSurfaceMapper());
-    polyActor->GetProperty()->SetInterpolationToFlat();
-    polyActor->GetProperty()->SetOpacity(0.2);
-    polyActor->GetProperty()->SetColor(
-      colors->GetColor4d("flesh").GetData()
-    );
+    std::cout << "OK1" << endl;
 
-    ren1->AddVolume(render.getVolume());
-    //ren1->AddActor(polyActor);
-    //ren1->AddActor(octreeActor);
-    ren1->SetBackground(colors->GetColor3d("Wheat").GetData());
-    ren1->GetActiveCamera()->Azimuth(45);
-    ren1->GetActiveCamera()->Elevation(30);
-    ren1->ResetCameraClippingRange();
-    ren1->ResetCamera();
+    //renderer->AddActor(polyActor);
+    //renderer->AddActor(octreeActor);
+    renderer->SetBackground(colors->GetColor3d("Wheat").GetData());
+    renderer->GetActiveCamera()->Azimuth(45);
+    renderer->GetActiveCamera()->Elevation(30);
+    renderer->ResetCameraClippingRange();
+    renderer->ResetCamera();
+
+    std::cout << "OK2" << endl;
 
     renWin->SetSize(600, 600);
     renWin->SetWindowName("SimpleRayCast");
 
-    this->ui->qvtkWidget->renderWindow()->AddRenderer(ren1);
+    std::cout << "OK3" << endl;
 
-    vtkNew<vtkBoxWidget2> boxWidget;
-    boxWidget->SetInteractor(this->ui->qvtkWidget->interactor());
-    boxWidget->RotationEnabledOff();
-    boxWidget->TranslationEnabledOn();
-    boxWidget->GetRepresentation()->SetPlaceFactor(1);
-    boxWidget->GetRepresentation()->PlaceWidget(render.getVolume()->GetBounds());
-
-    vtkSmartPointer<vtkMyCallback> callback = vtkSmartPointer<vtkMyCallback>::New();
-    callback->setBounds(render.getVolume()->GetBounds());
-    callback->initBounds();
-    key->SetCallback(callback);
-    key->SetBoxWidget(boxWidget);
-    boxWidget->AddObserver(vtkCommand::InteractionEvent, callback);
-    //boxWidget->On();
-    this->boxWidget = boxWidget;
-    this->boxWidget->On();
-
-    this->ui->qvtkWidget->interactor()->SetInteractorStyle(key);
+    this->ui->qvtkWidget->renderWindow()->AddRenderer(renderer);
 
     connect(this->ui->pushButton, SIGNAL(released()), this, SLOT(handleButton()));
+    connect(this->ui->openButton, SIGNAL(released()), this, SLOT(openFile()));
 }
 
 void gui::handleButton(){
@@ -235,8 +212,72 @@ void gui::handleButton(){
     double bounds[6] = {initI, length, initJ, width, initK, depth};
     render.extractSelectedVOI(bounds, true);
   }
-
+  renWin->Render();
   std::cout << initI << " " << initJ << " " << initK << endl;
+}
+
+void gui::openFile(){
+  std::cout << "OK" << endl;
+  vtkNew<vtkNamedColors> colors;
+
+  double spacing[3];
+  spacing[0] = std::stod(this->ui->sx->toPlainText().toUtf8().constData());
+  spacing[1] = std::stod(this->ui->sy->toPlainText().toUtf8().constData());
+  spacing[2] = std::stod(this->ui->sz->toPlainText().toUtf8().constData());
+
+  int dims[3];
+  dims[0] = std::stoi(this->ui->dx->toPlainText().toUtf8().constData());
+  dims[1] = std::stoi(this->ui->dy->toPlainText().toUtf8().constData());
+  dims[2] = std::stoi(this->ui->dz->toPlainText().toUtf8().constData());
+
+  std::cout << spacing[0] << " " << spacing[1] << " " << spacing[2] << endl;
+  std::cout << dims[0] << " " << dims[1] << " " << dims[2] << endl;
+
+  //double spacing[3] = {3.2, 3.2, 1.5};
+  //int dims[3] = {64, 64, 93};
+
+  char* path = this->ui->filePath->toPlainText().toUtf8().data();
+  render = Render(path, spacing, dims);
+
+  vtkNew<vtkBoxWidget2> boxWidget;
+  boxWidget->SetInteractor(this->ui->qvtkWidget->interactor());
+  boxWidget->RotationEnabledOff();
+  boxWidget->TranslationEnabledOn();
+  boxWidget->GetRepresentation()->SetPlaceFactor(1);
+  boxWidget->GetRepresentation()->PlaceWidget(render.getVolume()->GetBounds());
+
+  vtkSmartPointer<vtkMyCallback> callback = vtkSmartPointer<vtkMyCallback>::New();
+  callback->setBounds(render.getVolume()->GetBounds());
+  callback->initBounds();
+
+  vtkNew<KeyPressInteractionStyle> key;
+  key->SetCallback(callback);
+  key->SetBoxWidget(boxWidget);
+  key->SetCurrentRenderer(renderer);
+  key->SetRender(render);
+  key->SetRenWin(renWin);
+
+  this->ui->qvtkWidget->interactor()->SetInteractorStyle(key);
+  boxWidget->AddObserver(vtkCommand::InteractionEvent, callback);
+  //boxWidget->On();
+  this->boxWidget = boxWidget;
+  this->boxWidget->On();
+
+  vtkNew<vtkActor> polyActor;
+  polyActor->SetMapper(render.getSurfaceMapper());
+  polyActor->GetProperty()->SetInterpolationToFlat();
+  polyActor->GetProperty()->SetOpacity(0.2);
+  polyActor->GetProperty()->SetColor(
+    colors->GetColor4d("flesh").GetData()
+  );
+
+  renderer->AddVolume(render.getVolume());
+  renderer->SetBackground(colors->GetColor3d("Wheat").GetData());
+  renderer->GetActiveCamera()->Azimuth(45);
+  renderer->GetActiveCamera()->Elevation(30);
+  renderer->ResetCameraClippingRange();
+  renderer->ResetCamera();
+  renWin->Render();
 }
 
 gui::~gui()

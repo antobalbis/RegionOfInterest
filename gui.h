@@ -20,11 +20,14 @@ public:
 
 private slots:
     void handleButton();
+    void openFile();
 private:
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
     vtkSmartPointer<vtkImageShrink3D> shrink;
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
     Render render;
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
+    vtkSmartPointer<vtkRenderer> renderer;
     Ui::gui *ui;
 };
 #endif // GUI_H
