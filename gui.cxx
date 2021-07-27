@@ -101,13 +101,13 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
         }
       }
       else if(key == "s"){
-        double radius[1] = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
-        std::cout << radius[0] << endl;
+        double radius = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
+        std::cout << radius << endl;
         double center[3];
         center[0] = (bounds[1] + bounds[0])/2;
         center[1] = (bounds[3] + bounds[2])/2;
         center[2] = (bounds[5] + bounds[4])/2;
-        render.extractFormedVOI(0, radius, center, nullptr);
+        render.extractFormedVOI(0, bounds, center, radius, nullptr);
       }
       else if(key == "r"){
         render.restart();
@@ -137,7 +137,6 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
       this->renWin = renWin;
     }
 };
-
 
 gui::gui(QWidget *parent)
     : QMainWindow(parent)
@@ -271,12 +270,8 @@ void gui::openFile(){
     colors->GetColor4d("flesh").GetData()
   );
 
+  renderer->AddActor(polyActor);
   renderer->AddVolume(render.getVolume());
-  renderer->SetBackground(colors->GetColor3d("Wheat").GetData());
-  renderer->GetActiveCamera()->Azimuth(45);
-  renderer->GetActiveCamera()->Elevation(30);
-  renderer->ResetCameraClippingRange();
-  renderer->ResetCamera();
   renWin->Render();
 }
 
