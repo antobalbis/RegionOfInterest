@@ -1,5 +1,7 @@
 # Resumen del desarrollo
 
+En el estado actual del desarrollo tenemos dos clases: Render y GUI. La clase Render es la que se encarga de la lectura y la manipulación del volumen, mientras que la clase gui se encarga del cauce de renderizado y de gestionar la interfaz de usuario.
+
 ## Lectura de la imagen
 
 La idea es mantener en la memoria del sistema un elemento vtkImageData con el volumen original y otro vtkImageData con el volumen en el estado actual.
