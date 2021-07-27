@@ -57,9 +57,10 @@ class Render{
     vtkSmartPointer<vtkExtractVOI> fixImage();
     vtkSmartPointer<vtkExtractVOI> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
     void extractCone();
-    void extractSphere(double radius, double *center);
+    void extractSphere(double radius, double *center, double* bounds);
     void extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform);
-    void doExtraction(vtkSmartPointer<vtkImplicitFunction> function);
+    void doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds);
+    double *getLocalBounds(double *bounds);
 
   public:
     Render();
@@ -69,7 +70,7 @@ class Render{
     void fixDataBounds(double bounds[6]);
     void clipImage(double bounds[6]);
     void extractSelectedVOI(double bounds[6], bool localBounds);
-    void extractFormedVOI(int type, double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform);
+    void extractFormedVOI(int type, double *bounds, double *center, double radius, vtkSmartPointer<vtkAbstractTransform> transform);
     void restart();
     vtkSmartPointer<vtkImageData> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
