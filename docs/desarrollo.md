@@ -252,3 +252,6 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
 ```
 
 El código anterior muestra la clase que captura las teclas pulsadas, además cuando se pulsa la tecla "r" se reinicia el estado de la visualización al estado inicial.
+
+A continuación se muestra una captura con el estado actual del proyecto.
+![Captura del estado del proyecto](https://github.com/antobalbis/TFM-RegionOfInterest/blob/master/images/capturaGUI.png)
