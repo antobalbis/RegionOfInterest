@@ -23,6 +23,7 @@
 #include <vtkPolyData.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkOctreePointLocator.h>
+#include <vtkOctreePointLocatorNode.h>
 #include <vtkImageData.h>
 #include <vtkImageShrink3D.h>
 #include <vtkImageReader2.h>
@@ -48,6 +49,7 @@ class Render{
     vtkSmartPointer<vtkPolyDataMapper> polyMapper;
     vtkSmartPointer<vtkImageData> original;
     vtkSmartPointer<vtkImageData> current;
+    vtkSmartPointer<vtkOctreePointLocatorNode> node;
 
     void readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_init);
     void readDataFromFile(char* path, int x_dim, int y_dim, int z_dim);
@@ -61,6 +63,9 @@ class Render{
     void extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform);
     void doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds);
     double *getLocalBounds(double *bounds);
+    vtkSmartPointer<vtkOctreePointLocatorNode> getOctreeBounds(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level);
+    void createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, int level, int maxLevel);
+    void computeNodeBounds(int index, vtkSmartPointer<vtkOctreePointLocatorNode> node, double* parentBounds);
 
   public:
     Render();

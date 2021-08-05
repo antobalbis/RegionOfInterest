@@ -270,8 +270,21 @@ void gui::openFile(){
     colors->GetColor4d("flesh").GetData()
   );
 
+  vtkNew<vtkPolyDataMapper> polyMapper;
+  polyMapper->SetInputData(render.getOctreeRepresentation());
+
+  vtkNew<vtkActor> octreeActor;
+  polyActor->SetMapper(polyMapper);
+  polyActor->GetProperty()->SetInterpolationToFlat();
+  polyActor->GetProperty()->SetOpacity(0.2);
+  polyActor->GetProperty()->SetColor(
+    colors->GetColor4d("green").GetData()
+  );
+
   renderer->AddActor(polyActor);
   renderer->AddVolume(render.getVolume());
+  renderer->ResetCameraClippingRange();
+  renderer->ResetCamera();
   renWin->Render();
 }
 
