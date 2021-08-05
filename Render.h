@@ -49,7 +49,9 @@ class Render{
     vtkSmartPointer<vtkPolyDataMapper> polyMapper;
     vtkSmartPointer<vtkImageData> original;
     vtkSmartPointer<vtkImageData> current;
+    vtkSmartPointer<vtkOctreePointLocatorNode> root;
     vtkSmartPointer<vtkOctreePointLocatorNode> node;
+
 
     void readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_init);
     void readDataFromFile(char* path, int x_dim, int y_dim, int z_dim);
@@ -66,7 +68,7 @@ class Render{
     vtkSmartPointer<vtkOctreePointLocatorNode> getOctreeBounds(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level);
     void createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, int level, int maxLevel);
     void computeNodeBounds(int index, vtkSmartPointer<vtkOctreePointLocatorNode> node, double* parentBounds);
-
+    bool compareNodes(vtkSmartPointer<vtkOctreePointLocatorNode> _node);
   public:
     Render();
     Render(char *argv, double spacing[3], int dims[3]);

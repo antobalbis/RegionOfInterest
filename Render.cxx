@@ -103,8 +103,9 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   octree->GenerateRepresentation(4, octreeRepresentation);
 
   double *octreeBounds = octree->GetBounds();
-  node = vtkSmartPointer<vtkOctreePointLocatorNode>::New();
-  node->SetBounds(octreeBounds);
+  root = vtkSmartPointer<vtkOctreePointLocatorNode>::New();
+  root->SetBounds(octreeBounds);
+  node = root;
   createOctreeNodes(node, 0, 4);
 
   //vtkSmartPointer<vtkExtractVOI> voi = fixImage();
@@ -129,6 +130,7 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   //vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
   volumeMapper = vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper>::New();
   volumeMapper->SetMaskTypeToBinary();
+  volumeMapper->SetMaskInput(nullptr);
   //volumeMapper->SetMaskInput(threshold->GetOutput());
   //volumeMapper->SetInputConnection(accumulator->GetOutputPort());
   volumeMapper->SetInputConnection(shrink->GetOutputPort());
@@ -231,7 +233,7 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
   double *bounds_ = new double[6];
 
   if(!localBounds){
-    current->GetBounds(_bounds);
+    original->GetBounds(_bounds);
     if(bounds[0] < _bounds[0]) bounds[0] = _bounds[0];
     if(bounds[1] > _bounds[1]) bounds[1] = _bounds[1];
     if(bounds[2] < _bounds[2]) bounds[2] = _bounds[2];
@@ -239,32 +241,39 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
     if(bounds[4] < _bounds[4]) bounds[4] = _bounds[4];
     if(bounds[5] > _bounds[5]) bounds[5] = _bounds[5];
 
-    vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, node, 0);
+    vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, root, 0);
+    bool same = compareNodes(node_);
 
-    bounds_[0] = node_->GetMinBounds()[0];
-    bounds_[2] = node_->GetMinBounds()[1];
-    bounds_[4] = node_->GetMinBounds()[2];
-    bounds_[1] = node_->GetMaxBounds()[0];
-    bounds_[3] = node_->GetMaxBounds()[1];
-    bounds_[5] = node_->GetMaxBounds()[2];
+    if(!same){
+      std::cout << "IS NOT THE SAME" << endl;
+      bounds_[0] = node_->GetMinBounds()[0];
+      bounds_[2] = node_->GetMinBounds()[1];
+      bounds_[4] = node_->GetMinBounds()[2];
+      bounds_[1] = node_->GetMaxBounds()[0];
+      bounds_[3] = node_->GetMaxBounds()[1];
+      bounds_[5] = node_->GetMaxBounds()[2];
 
-    //std::cout << "OCTREE NODE BOUNDS: " << endl;
-    //std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
-    bounds_ = getLocalBounds(bounds_);
+      //std::cout << "OCTREE NODE BOUNDS: " << endl;
+      std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
+      bounds_ = getLocalBounds(bounds_);
 
-  }
+      vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+      current = voi->GetOutput();
+      volumeMapper->SetInputData(current);
+    }
 
-  vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, current);
-  current = voi->GetOutput();
-  volumeMapper->SetInputConnection(voi->GetOutputPort());
+    std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
 
-  std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
-
-  if(!localBounds){
     vtkSmartPointer<vtkBox> box = vtkSmartPointer<vtkBox>::New();
     box->SetBounds(bounds);
     doExtraction(box, bounds_);
-  }
+
+  }/*else{
+    vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+    current = voi->GetOutput();
+    volumeMapper->SetInputConnection(voi->GetOutputPort());
+  }*/
+
 }
 
 vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
@@ -345,13 +354,16 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
   stencilImage->SetOutputWholeExtent(current->GetExtent());
   stencilImage->Update();
 
+  std::cout << current->GetSpacing()[0] << " " << current->GetSpacing()[1] << " " << current->GetSpacing()[2] << endl;
+  std::cout << current->GetOrigin()[0] << " " << current->GetOrigin()[1] << " " << current->GetOrigin()[2] << endl;
+
   vtkNew<vtkImageStencil> stencil;
   stencil->SetInputData(current);
   stencil->SetStencilConnection(stencilImage->GetOutputPort());
   stencil->SetBackgroundValue(0);
   stencil->Update();
 
-  vtkNew<vtkImageThreshold> threshold;
+  /*vtkNew<vtkImageThreshold> threshold;
   threshold->SetInputData(stencil->GetOutput());
   threshold->ThresholdByUpper(1);
   threshold->SetOutputScalarTypeToUnsignedChar();
@@ -359,23 +371,25 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
   threshold->SetInValue(255);
   threshold->SetOutValue(0);
   threshold->ReplaceOutOn();
-  threshold->Update();
+  threshold->Update();*/
 
-  volumeMapper->SetMaskInput(threshold->GetOutput());
+  volumeMapper->SetMaskInput(stencil->GetOutput());
 }
 
 void Render::restart(){
   current = original;
+  node = root;
 
   shrink->SetInputData(original);
   shrink->Update();
 
   volumeMapper->SetInputConnection(shrink->GetOutputPort());
+  volumeMapper->SetMaskInput(nullptr);
 }
 
 double *Render::getLocalBounds(double *bounds){
   double *_bounds = new double[6];
-  double *bounds_local = current->GetBounds();
+  double *bounds_local = original->GetBounds();
 
   if(bounds[0] < bounds_local[0]) bounds[0] = bounds_local[0];
   if(bounds[2] < bounds_local[2]) bounds[2] = bounds_local[2];
@@ -479,6 +493,15 @@ void Render::createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, 
     for(int i = 0; i < 8; i++){
       createOctreeNodes(node->GetChild(i), level, maxLevel);
     }
+  }
+}
+
+bool Render::compareNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node_){
+  if(node_ == node){
+    return true;
+  }else{
+    node = node_;
+    return false;
   }
 }
 
