@@ -63,7 +63,7 @@ class Render{
     void extractCone();
     void extractSphere(double radius, double *center, double* bounds);
     void extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform);
-    void doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds);
+    void doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds, int type);
     double *getLocalBounds(double *bounds);
     vtkSmartPointer<vtkOctreePointLocatorNode> getOctreeBounds(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level);
     void createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, int level, int maxLevel);

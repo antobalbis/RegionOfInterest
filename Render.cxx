@@ -259,14 +259,14 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
 
       vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
       current = voi->GetOutput();
-      volumeMapper->SetInputData(current);
+      volumeMapper->SetInputConnection(voi->GetOutputPort());
     }
 
     std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
 
     vtkSmartPointer<vtkBox> box = vtkSmartPointer<vtkBox>::New();
     box->SetBounds(bounds);
-    doExtraction(box, bounds_);
+    doExtraction(box, bounds, 0);
 
   }/*else{
     vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
@@ -305,6 +305,7 @@ vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPoin
 
 void Render::extractFormedVOI(int type, double* bounds, double* center, double radius, vtkSmartPointer<vtkAbstractTransform> transform){
   double *_bounds = original->GetBounds();
+  double *bounds_ = new double[6];
 
   if(bounds[0] < _bounds[0]) _bounds[0] = bounds[0];
   if(bounds[1] > _bounds[1]) _bounds[1] = bounds[1];
@@ -315,17 +316,26 @@ void Render::extractFormedVOI(int type, double* bounds, double* center, double r
 
   std::cout << octree->GetNumberOfBuckets() << endl;
   vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, node, 0);
+  bool same = compareNodes(node_);
 
-  double bounds_[6];
-  for(int i = 0; i < 6; i = i+2){
-    bounds_[i] = node_->GetMinBounds()[i/2];
-  }
-  for(int i = 1; i < 6; i = i+2){
-    bounds_[i] = node_->GetMaxBounds()[i/2];
+  if(!same){
+    std::cout << "IS NOT THE SAME" << endl;
+    bounds_[0] = node_->GetMinBounds()[0];
+    bounds_[2] = node_->GetMinBounds()[1];
+    bounds_[4] = node_->GetMinBounds()[2];
+    bounds_[1] = node_->GetMaxBounds()[0];
+    bounds_[3] = node_->GetMaxBounds()[1];
+    bounds_[5] = node_->GetMaxBounds()[2];
+
+    //std::cout << "OCTREE NODE BOUNDS: " << endl;
+    std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
+    bounds_ = getLocalBounds(bounds_);
+
+    vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+    current = voi->GetOutput();
+    volumeMapper->SetInputConnection(voi->GetOutputPort());
   }
 
-  std::cout << "OCTREE NODE BOUNDS:" << endl;
-  std::cout << bounds_[0] << " " << bounds_[1] << " " << bounds_[2] << " " << bounds_[3] << " " << bounds_[4] << " " << bounds_[5] << endl;
   extractSphere(radius, center, getLocalBounds(bounds));
 }
 
@@ -334,46 +344,53 @@ void Render::extractSphere(double radius, double *center, double *bounds){
   sphere->SetCenter(center);
   sphere->SetRadius(radius);
 
-  doExtraction(sphere, bounds);
+  doExtraction(sphere, bounds, 1);
 }
 
 void Render::extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform){
 
 }
 
-void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds){
-  vtkNew<vtkCutter> clipVolume;
-  clipVolume->SetCutFunction(function);
-  clipVolume->SetInputData(current);
-  clipVolume->Update();
+void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds, int type){
+  if(type == 0){
+    volumeMapper->SetMaskInput(nullptr);
+    volumeMapper->SetCropping(true);
+    volumeMapper->SetCroppingRegionPlanes(bounds);
+  }else{
+    vtkNew<vtkCutter> clipVolume;
+    clipVolume->SetCutFunction(function);
+    clipVolume->SetInputData(original);
+    clipVolume->Update();
 
-  vtkNew<vtkPolyDataToImageStencil> stencilImage;
-  stencilImage->SetInputData(clipVolume->GetOutput());
-  stencilImage->SetOutputOrigin(current->GetOrigin());
-  stencilImage->SetOutputSpacing(current->GetSpacing());
-  stencilImage->SetOutputWholeExtent(current->GetExtent());
-  stencilImage->Update();
+    vtkNew<vtkPolyDataToImageStencil> stencilImage;
+    stencilImage->SetInputData(clipVolume->GetOutput());
+    stencilImage->SetOutputOrigin(original->GetOrigin());
+    stencilImage->SetOutputSpacing(original->GetSpacing());
+    stencilImage->SetOutputWholeExtent(original->GetExtent());
+    stencilImage->Update();
 
-  std::cout << current->GetSpacing()[0] << " " << current->GetSpacing()[1] << " " << current->GetSpacing()[2] << endl;
-  std::cout << current->GetOrigin()[0] << " " << current->GetOrigin()[1] << " " << current->GetOrigin()[2] << endl;
+    vtkNew<vtkImageStencil> stencil;
+    stencil->SetInputData(original);
+    stencil->SetStencilConnection(stencilImage->GetOutputPort());
+    stencil->SetBackgroundValue(0);
+    stencil->Update();
 
-  vtkNew<vtkImageStencil> stencil;
-  stencil->SetInputData(current);
-  stencil->SetStencilConnection(stencilImage->GetOutputPort());
-  stencil->SetBackgroundValue(0);
-  stencil->Update();
+    
 
-  /*vtkNew<vtkImageThreshold> threshold;
-  threshold->SetInputData(stencil->GetOutput());
-  threshold->ThresholdByUpper(1);
-  threshold->SetOutputScalarTypeToUnsignedChar();
-  threshold->ReplaceInOn();
-  threshold->SetInValue(255);
-  threshold->SetOutValue(0);
-  threshold->ReplaceOutOn();
-  threshold->Update();*/
+    vtkNew<vtkImageThreshold> threshold;
+    threshold->SetInputData(stencil->GetOutput());
+    threshold->ThresholdByUpper(1);
+    threshold->SetOutputScalarTypeToUnsignedChar();
+    threshold->ReplaceInOn();
+    threshold->SetInValue(255);
+    threshold->SetOutValue(0);
+    threshold->ReplaceOutOn();
+    threshold->Update();
 
-  volumeMapper->SetMaskInput(stencil->GetOutput());
+    volumeMapper->SetCropping(false);
+    volumeMapper->SetMaskInput(threshold->GetOutput());
+  }
+
 }
 
 void Render::restart(){
