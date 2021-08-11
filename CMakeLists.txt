@@ -7,8 +7,7 @@ endif()
 
 PROJECT(volumeVisualization)
 
-find_package(VTK REQUIRED
-)
+find_package(VTK REQUIRED)
 
 if(NOT VTK_FOUND)
   message(FATAL_ERROR "volumeVisualization: ${VTK_NOT_FOUND_MESSAGE}")
