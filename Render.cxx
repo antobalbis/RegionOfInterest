@@ -268,12 +268,11 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
     box->SetBounds(bounds);
     doExtraction(box, bounds, 0);
 
-  }/*else{
-    vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+  }else{
+    vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds, original);
     current = voi->GetOutput();
     volumeMapper->SetInputConnection(voi->GetOutputPort());
-  }*/
-
+  }
 }
 
 vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
@@ -315,7 +314,7 @@ void Render::extractFormedVOI(int type, double* bounds, double* center, double r
   if(bounds[5] > _bounds[5]) _bounds[5] = bounds[5];
 
   std::cout << octree->GetNumberOfBuckets() << endl;
-  vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, node, 0);
+  vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, root, 0);
   bool same = compareNodes(node_);
 
   if(!same){
@@ -375,8 +374,6 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
     stencil->SetBackgroundValue(0);
     stencil->Update();
 
-    
-
     vtkNew<vtkImageThreshold> threshold;
     threshold->SetInputData(stencil->GetOutput());
     threshold->ThresholdByUpper(1);
@@ -401,6 +398,7 @@ void Render::restart(){
   shrink->Update();
 
   volumeMapper->SetInputConnection(shrink->GetOutputPort());
+  volumeMapper->SetCropping(false);
   volumeMapper->SetMaskInput(nullptr);
 }
 
@@ -470,33 +468,6 @@ vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bound
       return nullptr;
     }
 
-    /*int indexes[8];
-    for(int i = 0; i < 8; i++){
-      indexes[i] = octree->GetRegionContainingPoint(points[i][0], points[i][1], points[i][2]);
-    }
-
-    for(int i = 0; i < 7; i++){
-      if(indexes[i] != indexes[i+1]) inside = false;
-    }
-
-    /*for(int i = 0; i < 8; i++){
-      double bounds_leaf[6];
-      octree->GetRegionBounds(indexes[i], bounds_leaf);
-
-      std::cout << indexes[i] << ": ";
-      std::cout << bounds_leaf[0] << " " << bounds_leaf[1] << " " << bounds_leaf[2] << " ";
-      std::cout << bounds_leaf[3] << " " << bounds_leaf[4] << " " << bounds_leaf[5];
-      std::cout << endl;
-
-      if(bounds[0] > bounds_leaf[0]) bounds[0] = bounds_leaf[0];
-      if(bounds[2] > bounds_leaf[2]) bounds[2] = bounds_leaf[2];
-      if(bounds[4] > bounds_leaf[4]) bounds[4] = bounds_leaf[4];
-      if(bounds[1] < bounds_leaf[1]) bounds[1] = bounds_leaf[1];
-      if(bounds[3] < bounds_leaf[3]) bounds[3] = bounds_leaf[3];
-      if(bounds[5] < bounds_leaf[5]) bounds[5] = bounds_leaf[5];
-    }
-
-    return bounds;*/
 }
 
 void Render::createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, int level, int maxLevel){
