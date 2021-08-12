@@ -42,7 +42,6 @@ class Render{
     int dims[3];
     double spacing[3];
 
-
     vtkSmartPointer<vtkImageShrink3D> shrink;
     vtkSmartPointer<vtkVolumeProperty> volumeProperty;
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
@@ -62,7 +61,7 @@ class Render{
     void readNrrdImage(char* path);
     void deleteOutsideRegion();
     vtkSmartPointer<vtkExtractVOI> fixImage();
-    vtkSmartPointer<vtkExtractVOI> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
+    vtkSmartPointer<vtkImageShrink3D> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
     void extractCone();
     void extractSphere(double radius, double *center, double* bounds);
     void extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform);

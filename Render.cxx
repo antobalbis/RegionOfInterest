@@ -99,8 +99,8 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
 
   //vtkSmartPointer<vtkExtractVOI> voi = fixImage();
 
-  original = shrink->GetOutput();
-  current = shrink->GetOutput();
+  //original = shrink->GetOutput();
+  //current = shrink->GetOutput();
 
   //vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
   volumeMapper = vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper>::New();
@@ -108,7 +108,7 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   volumeMapper->SetMaskInput(nullptr);
   //volumeMapper->SetMaskInput(threshold->GetOutput());
   //volumeMapper->SetInputConnection(accumulator->GetOutputPort());
-  volumeMapper->SetInputConnection(shrink->GetOutputPort());
+  volumeMapper->SetInputData(current);
   //volumeMapper->SetInputConnection(voi->GetOutputPort());
   //volumeMapper->SetPartitions(10,10,10);
   //volumeMapper->SetInputData(image);
@@ -126,7 +126,6 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
 //Method to read data from a number of files, we define the directory path and
 //the volume's extent.
 void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_init){
-
   vtkNew<vtkVolume16Reader> reader;
   reader->SetDataDimensions (dims[0], dims[1]);
   reader->SetImageRange (1, dims[2]);
@@ -138,11 +137,15 @@ void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_
   shrink->SetShrinkFactors(1, 1, 1);
   shrink->Update();
 
+  original = reader->GetOutput();
+
   std::cout << "SIZE = " << shrink->GetOutput()->GetActualMemorySize() << endl;
   factor = shrink->GetOutput()->GetActualMemorySize() / maxsize + 1;
 
   shrink->SetShrinkFactors(factor, factor, factor);
   shrink->Update();
+
+  current = shrink->GetOutput();
 }
 
 void Render::readDICOMImage(char* path, int x_dim, int y_dim, int z_dim, int z_init){
@@ -184,7 +187,7 @@ void Render::readNrrdImage(char *path){
   shrink->Update();
 }
 
-vtkSmartPointer<vtkExtractVOI> Render::fixImage(){
+/*vtkSmartPointer<vtkExtractVOI> Render::fixImage(){
   octreeRepresentation->ComputeBounds();
   double *bounds = octreeRepresentation->GetBounds();
   double *bounds_ = shrink->GetOutput()->GetBounds();
@@ -207,7 +210,7 @@ vtkSmartPointer<vtkExtractVOI> Render::fixImage(){
   double _bounds[6] = {minPoint[0], maxPoint[0], minPoint[1], maxPoint[1], minPoint[2], maxPoint[2]};
 
   return extractVOI(_bounds, shrink->GetOutput());
-}
+}*/
 
 void Render::extractSelectedVOI(double bounds[6], bool localBounds){
   double *_bounds = new double[6];
@@ -242,9 +245,10 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
 
       bounds_ = getLocalBounds(bounds_);
 
-      vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+      vtkSmartPointer<vtkImageShrink3D> voi = extractVOI(bounds_, original);
       current = voi->GetOutput();
       volumeMapper->SetInputConnection(voi->GetOutputPort());
+
     }else if(!same){
       std::cout << "IS NOT THE SAME" << endl;
       bounds_[0] = node_->GetMinBounds()[0];
@@ -258,7 +262,7 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
       std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
       bounds_ = getLocalBounds(bounds_);
 
-      vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+      vtkSmartPointer<vtkImageShrink3D> voi = extractVOI(bounds_, original);
       current = voi->GetOutput();
       volumeMapper->SetInputConnection(voi->GetOutputPort());
     }
@@ -270,19 +274,24 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
     doExtraction(box, bounds, 0);
 
   }else{
-    vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds, original);
+    vtkSmartPointer<vtkImageShrink3D> voi = extractVOI(bounds, original);
     current = voi->GetOutput();
     volumeMapper->SetInputConnection(voi->GetOutputPort());
   }
 }
 
-vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
+vtkSmartPointer<vtkImageShrink3D> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
   vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
   voi->SetInputData(dataSet);
   voi->SetVOI((int) bounds[0], (int) bounds[1], (int) bounds[2], (int) bounds[3], (int) bounds[4], (int) bounds[5]);
   voi->Update();
 
-  return voi;
+  factor = voi->GetOutput()->GetActualMemorySize() / maxsize + 1;
+  vtkSmartPointer<vtkImageShrink3D> shrink3d = vtkSmartPointer<vtkImageShrink3D>::New();
+  shrink3d->SetInputConnection(voi->GetOutputPort());
+  shrink3d->SetShrinkFactors(factor, factor, factor);
+
+  return shrink3d;
 }
 
 void Render::extractFormedVOI(int type, double* bounds, double* center, double radius, vtkSmartPointer<vtkAbstractTransform> transform){
@@ -312,7 +321,7 @@ void Render::extractFormedVOI(int type, double* bounds, double* center, double r
     std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
     bounds_ = getLocalBounds(bounds_);
 
-    vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+    vtkSmartPointer<vtkImageShrink3D> voi = extractVOI(bounds_, original);
     current = voi->GetOutput();
     volumeMapper->SetInputConnection(voi->GetOutputPort());
   }
