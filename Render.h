@@ -36,11 +36,14 @@
 
 class Render{
   private:
+    int maxsize = 500;
     int factor;
+    int level;
     int dims[3];
     double spacing[3];
+
+
     vtkSmartPointer<vtkImageShrink3D> shrink;
-    vtkSmartPointer<vtkImageShrink3D> shrink2;
     vtkSmartPointer<vtkVolumeProperty> volumeProperty;
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
     vtkSmartPointer<vtkVolume> volume;
@@ -69,6 +72,8 @@ class Render{
     void createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, int level, int maxLevel);
     void computeNodeBounds(int index, vtkSmartPointer<vtkOctreePointLocatorNode> node, double* parentBounds);
     bool compareNodes(vtkSmartPointer<vtkOctreePointLocatorNode> _node);
+    vtkSmartPointer<vtkOctreePointLocatorNode> findNodeFromPoint(double point[3]);
+
   public:
     Render();
     Render(char *argv, double spacing[3], int dims[3]);

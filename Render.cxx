@@ -35,7 +35,7 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   this->spacing[0] = spacing[0];
   this->spacing[1] = spacing[1];
   this->spacing[2] = spacing[2];
-
+  this->level = 0;
   this->factor = 1;
 
   //readDataFromFile(argv, 64, 64, 93);
@@ -83,17 +83,6 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   normals->SetFeatureAngle(60.0);
   normals->Update();
 
-  /*vtkNew<vtkImageThreshold> threshold;
-  threshold->SetInputData(original);
-  threshold->ThresholdByUpper(500);
-  threshold->SetOutputScalarTypeToUnsignedChar();
-  threshold->ReplaceInOn();
-  threshold->SetInValue(255);
-  threshold->SetOutValue(0);
-  threshold->ReplaceOutOn();
-  threshold->Update();
-  */
-
   //We use the surface extracted to define an octree.
   octree = vtkSmartPointer<vtkOctreePointLocator>::New();
   octree->SetDataSet(shrink->GetOutput());
@@ -109,20 +98,6 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   createOctreeNodes(node, 0, 4);
 
   //vtkSmartPointer<vtkExtractVOI> voi = fixImage();
-
-  /*vtkNew<vtkPolyDataToImageStencil> stencilImage;
-  stencilImage->SetInputData(octreeRepresentation);
-  stencilImage->SetOutputOrigin(voi->GetOutput()->GetOrigin());
-  stencilImage->SetOutputSpacing(voi->GetOutput()->GetSpacing());
-  stencilImage->SetOutputWholeExtent(voi->GetOutput()->GetExtent());
-  stencilImage->Update();
-
-  vtkNew<vtkImageStencil> stencil;
-  stencil->SetInputConnection(shrink->GetOutputPort());
-  stencil->SetStencilConnection(stencilImage->GetOutputPort());
-  stencil->SetBackgroundValue(0);
-  stencil->Update();
-  */
 
   original = shrink->GetOutput();
   current = shrink->GetOutput();
@@ -161,6 +136,12 @@ void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_
   shrink = vtkSmartPointer<vtkImageShrink3D>::New();
   shrink->SetInputConnection(reader->GetOutputPort());
   shrink->SetShrinkFactors(1, 1, 1);
+  shrink->Update();
+
+  std::cout << "SIZE = " << shrink->GetOutput()->GetActualMemorySize() << endl;
+  factor = shrink->GetOutput()->GetActualMemorySize() / maxsize + 1;
+
+  shrink->SetShrinkFactors(factor, factor, factor);
   shrink->Update();
 }
 
@@ -243,8 +224,28 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
 
     vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, root, 0);
     bool same = compareNodes(node_);
+    std::cout << "LEVEL = " << level << endl;
 
-    if(!same){
+    if(level == 0){
+      double min_point[3] = {bounds[0], bounds[2], bounds[4]};
+      double max_point[3] = {bounds[1], bounds[3], bounds[5]};
+
+      vtkSmartPointer<vtkOctreePointLocatorNode> min_node = findNodeFromPoint(min_point);
+      vtkSmartPointer<vtkOctreePointLocatorNode> max_node = findNodeFromPoint(max_point);
+
+      bounds_[0] = min_node->GetMinBounds()[0];
+      bounds_[2] = min_node->GetMinBounds()[1];
+      bounds_[4] = min_node->GetMinBounds()[2];
+      bounds_[1] = max_node->GetMaxBounds()[0];
+      bounds_[3] = max_node->GetMaxBounds()[1];
+      bounds_[5] = max_node->GetMaxBounds()[2];
+
+      bounds_ = getLocalBounds(bounds_);
+
+      vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+      current = voi->GetOutput();
+      volumeMapper->SetInputConnection(voi->GetOutputPort());
+    }else if(!same){
       std::cout << "IS NOT THE SAME" << endl;
       bounds_[0] = node_->GetMinBounds()[0];
       bounds_[2] = node_->GetMinBounds()[1];
@@ -284,24 +285,6 @@ vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPoin
   return voi;
 }
 
-/*void Render::deleteOutsideRegion(){
-  //std::cout << "Memory shrink prev: " << shrink2->GetOutput()->GetActualMemorySize() << endl;
-  int nbuckets = octree->GetNumberOfLeafNodes();
-  double bounds[6];
-  vtkIdTypeArray* ids;
-
-  std::cout << "NUM BUCKETS: " << nbuckets << endl;
-
-  for(int i = 0; i < nbuckets; i++){
-    int size = octree->GetPointsInRegion(i)->GetSize();
-    if(size == 0){  //el octante está vacío
-      octree->GetRegionDataBounds(i, bounds);
-      fixDataBounds(bounds);
-      clipImage(bounds);
-    }
-  }
-}*/
-
 void Render::extractFormedVOI(int type, double* bounds, double* center, double radius, vtkSmartPointer<vtkAbstractTransform> transform){
   double *_bounds = original->GetBounds();
   double *bounds_ = new double[6];
@@ -313,7 +296,6 @@ void Render::extractFormedVOI(int type, double* bounds, double* center, double r
   if(bounds[4] < _bounds[4]) _bounds[4] = bounds[4];
   if(bounds[5] > _bounds[5]) _bounds[5] = bounds[5];
 
-  std::cout << octree->GetNumberOfBuckets() << endl;
   vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, root, 0);
   bool same = compareNodes(node_);
 
@@ -436,12 +418,6 @@ vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bound
     double *_bounds;
     bool inside = true;
 
-    /*for(int i = 0; i < 8; i++){
-      points[i][0] = bounds[i/4];
-      points[i][1] = bounds[2 + (i/2) - 2*(i/4)];
-      points[i][2] = bounds[4 + i%2];
-    }*/
-
     points[0][0] = bounds[0];
     points[0][1] = bounds[2];
     points[0][2] = bounds[4];
@@ -455,6 +431,7 @@ vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bound
     if(inside){
       std::cout << "IS INSIDE" << endl;
       if(level == 4){
+        this->level = level;
         return node;
       }else{
         for(int i = 0; i < 8; i++){
@@ -462,6 +439,7 @@ vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bound
             return node->GetChild(i);
           }
         }
+        this->level = level;
         return node;
       }
     }else{
@@ -476,12 +454,25 @@ void Render::createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, 
     level++;
 
     double *bounds = node->GetMinBounds();
-    std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2];
+    //std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2];
 
     for(int i = 0; i < 8; i++){
       createOctreeNodes(node->GetChild(i), level, maxLevel);
     }
   }
+}
+
+vtkSmartPointer<vtkOctreePointLocatorNode> Render::findNodeFromPoint(double point[3]){
+  vtkSmartPointer<vtkOctreePointLocatorNode> node_;
+  for(int i = 0; i < 8; i++){
+    for(int j = 0; j < 8; j++){
+      node_ = root->GetChild(i)->GetChild(j);
+      if(node_->ContainsPoint(point[0], point[1], point[2], 0)){
+        return node_;
+      }
+    }
+  }
+  return root;
 }
 
 bool Render::compareNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node_){
