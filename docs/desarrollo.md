@@ -50,6 +50,23 @@ Luego usamos vtkContourFilter para extraer la isosuperficie del volumen y vtkPol
 La extracción de una ROI cúbica o esférica se lleva a cabo de forma diferente, lo primero en ambos casos es usar vtkExtractVOI para enviar a GPU solamente el área seleccionada (en esta primera versión), para poder hacer esto primero es necesario traducir las coordenadas de mundo en índices locales del volumen, asegurándonos que no se extralimiten las dimensiones del volumen. Para esto contamos con el método TransformPhysicalPointToContinuousIndex de la clase vtkImageData.
 
 ```
+vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
+  vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
+  voi->SetInputData(dataSet);
+  voi->SetVOI((int) bounds[0], (int) bounds[1], (int) bounds[2], (int) bounds[3], (int) bounds[4], (int) bounds[5]);
+  voi->Update();
+
+  return voi;
+}
+```
+
+Una vez que tenemos los índices locales extraemos la región de interés usando vtkExtractVOI. El problema de esta solución es que cada vez que queremos extraer una ROI tenemos que eliminar y cargar en memoria el área seleccionada, por tanto se proponer una nueva solución.
+
+### Extracción de ROI V2
+
+En esta nueva solución usamos un octree para dividir el espacio y seleccionar el ocatante más pequeño que contenga el área seleccionada.
+
+```
 void Render::extractSelectedVOI(double bounds[6], bool localBounds){
   double *_bounds = new double[6];
   double *bounds_ = new double[6];
@@ -131,19 +148,38 @@ vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bound
 }
 ```
 
+El código anterior muestra como se extrae la ROI cúbica que va a ser cargada en GPU. El problema que encontramos con este método es que puede darse el caso de que se selecciona una región pequeña pero que el único nodo que la englobe por completo sea el nodo raíz, y por tanto no estemos reduciendo el tamaño del objeto que vamos a enviar a GPU.
 
+### Extracción de ROI V3
+
+Para esta nueva versión se propone una modificación sobre el caso anterior en la que si el nodo elegido del octree es el nodo raíz lo que se va a hacer es calcular una región usando los nodos de nivel 2.
 
 ```
-vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
-  vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
-  voi->SetInputData(dataSet);
-  voi->SetVOI((int) bounds[0], (int) bounds[1], (int) bounds[2], (int) bounds[3], (int) bounds[4], (int) bounds[5]);
-  voi->Update();
+if(level == 0){
+      double min_point[3] = {bounds[0], bounds[2], bounds[4]};
+      double max_point[3] = {bounds[1], bounds[3], bounds[5]};
 
-  return voi;
+      vtkSmartPointer<vtkOctreePointLocatorNode> min_node = findNodeFromPoint(min_point);
+      vtkSmartPointer<vtkOctreePointLocatorNode> max_node = findNodeFromPoint(max_point);
+
+      bounds_[0] = min_node->GetMinBounds()[0];
+      bounds_[2] = min_node->GetMinBounds()[1];
+      bounds_[4] = min_node->GetMinBounds()[2];
+      bounds_[1] = max_node->GetMaxBounds()[0];
+      bounds_[3] = max_node->GetMaxBounds()[1];
+      bounds_[5] = max_node->GetMaxBounds()[2];
+
+      bounds_ = getLocalBounds(bounds_);
+
+      vtkSmartPointer<vtkImageShrink3D> voi = extractVOI(bounds_, original);
+      current = voi->GetOutput();
+      volumeMapper->SetInputConnection(voi->GetOutputPort());
+
 }
 ```
-El código anterior muestra como se extrae la ROI cúbica que va a ser cargada en GPU.
+Como vemos en el código anterior lo que hacemos es extraer el nodo usando como punto las coordenadas x, y, z mínimas y mñaximas de la región seleccionada, buscar los nodos en los que se encuentran y coger la x,y,z mínimas del primer nodo y las x, y, z máximas del segundo y usar eso como boundaries para la extracción de la región de interés.
+
+### Extracción de una región esférica
 
 Para extraer una ROI esférica, además de seleccionar y cargar el octante mínimo del octree de la misma forma que en el caso anterior, se realiza lo siguiente. Primero definimos un objeto del tipo vtkSphere a partir del centro y el radio.
 
