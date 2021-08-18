@@ -361,3 +361,39 @@ El código anterior muestra la clase que captura las teclas pulsadas, además cu
 
 A continuación se muestra una captura con el estado actual del proyecto.
 ![Captura del estado del proyecto](https://github.com/antobalbis/TFM-RegionOfInterest/blob/master/images/capturaGUI.png)
+
+# Benchmark
+
+Para comprobar si supone una mejora y cuanto mejora se ha realizado un benchmark que, realiza un número de transformaciones sobre el objeto y calcula el tiempo que tarda en realizarlas.
+
+```
+    for(int j = 0; j < 100; j++){
+      for(int i = 1; i <= 10; i++){
+        double bounds[6] = {0, 64/i-1, 0, 64/i-1, 0, 93/i-1};
+        render.extractSelectedVOI(bounds, true);
+        renWin->Render();
+      }
+    }
+```
+
+En el código se muestra que para calcular el tiempo se realizan 100 veces 10 transformaciones sobre el objeto, primero aplicando la versión base del algoritmo y después aplicando la versión 2 del algoritmo.
+
+|version base |	Version 2 |
+|---|---|
+|10,9453 | 9,74308 |
+|11,9699 | 9,26847 |
+|11,6645 | 9,73638 |
+|11,616 | 9,48097|
+|11,628 | 9,53766|
+|11,9279 | 9,65895|
+|11,6447 | 9,56991|
+|11,6239 | 9,49239|
+|11,7382 | 9,82945|
+|11,5664 | 9,55428|
+
+
+Los tiempos obtenidos se encuentran en los siguientes enlaces:
+- [V0](https://github.com/antobalbis/TFM-RegionOfInterest/blob/master/benchmark/times/n_octree.txt)
+- [V1](https://github.com/antobalbis/TFM-RegionOfInterest/blob/master/benchmark/times/n_octree.txt)
+
+El resultado medio de los algoritmos ha sido de 11,63248 segundos para la versión base y de 9,587154 segundos para la versión 2, por tanto vemos que la segunda versión resulta más eficiente a la hora de seleccionar una ROI.
