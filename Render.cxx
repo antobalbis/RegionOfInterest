@@ -139,11 +139,11 @@ void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_
 
   original = reader->GetOutput();
 
-  std::cout << "SIZE = " << shrink->GetOutput()->GetActualMemorySize() << endl;
+  /*std::cout << "SIZE = " << shrink->GetOutput()->GetActualMemorySize() << endl;
   factor = shrink->GetOutput()->GetActualMemorySize() / maxsize + 1;
 
   shrink->SetShrinkFactors(factor, factor, factor);
-  shrink->Update();
+  shrink->Update();*/
 
   current = shrink->GetOutput();
 }
@@ -295,37 +295,16 @@ vtkSmartPointer<vtkImageShrink3D> Render::extractVOI(double bounds[6], vtkSmartP
 }
 
 void Render::extractFormedVOI(int type, double* bounds, double* center, double radius, vtkSmartPointer<vtkAbstractTransform> transform){
-  double *_bounds = original->GetBounds();
-  double *bounds_ = new double[6];
+  double* _bounds = new double[6];
 
-  if(bounds[0] < _bounds[0]) _bounds[0] = bounds[0];
-  if(bounds[1] > _bounds[1]) _bounds[1] = bounds[1];
-  if(bounds[2] < _bounds[2]) _bounds[2] = bounds[2];
-  if(bounds[3] > _bounds[3]) _bounds[3] = bounds[3];
-  if(bounds[4] < _bounds[4]) _bounds[4] = bounds[4];
-  if(bounds[5] > _bounds[5]) _bounds[5] = bounds[5];
+  _bounds[0] = bounds[0];
+  _bounds[1] = bounds[1];
+  _bounds[2] = bounds[2];
+  _bounds[3] = bounds[3];
+  _bounds[4] = bounds[4];
+  _bounds[5] = bounds[5];
 
-  vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, root, 0);
-  bool same = compareNodes(node_);
-
-  if(!same){
-    std::cout << "IS NOT THE SAME" << endl;
-    bounds_[0] = node_->GetMinBounds()[0];
-    bounds_[2] = node_->GetMinBounds()[1];
-    bounds_[4] = node_->GetMinBounds()[2];
-    bounds_[1] = node_->GetMaxBounds()[0];
-    bounds_[3] = node_->GetMaxBounds()[1];
-    bounds_[5] = node_->GetMaxBounds()[2];
-
-    //std::cout << "OCTREE NODE BOUNDS: " << endl;
-    std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
-    bounds_ = getLocalBounds(bounds_);
-
-    vtkSmartPointer<vtkImageShrink3D> voi = extractVOI(bounds_, original);
-    current = voi->GetOutput();
-    volumeMapper->SetInputConnection(voi->GetOutputPort());
-  }
-
+  //extractSelectedVOI(_bounds, false);
   extractSphere(radius, center, getLocalBounds(bounds));
 }
 
@@ -349,34 +328,25 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
   }else{
     vtkNew<vtkCutter> clipVolume;
     clipVolume->SetCutFunction(function);
-    clipVolume->SetInputData(original);
+    clipVolume->SetInputData(current);
     clipVolume->Update();
 
     vtkNew<vtkPolyDataToImageStencil> stencilImage;
     stencilImage->SetInputData(clipVolume->GetOutput());
-    stencilImage->SetOutputOrigin(original->GetOrigin());
-    stencilImage->SetOutputSpacing(original->GetSpacing());
-    stencilImage->SetOutputWholeExtent(original->GetExtent());
+    stencilImage->SetOutputOrigin(current->GetOrigin());
+    stencilImage->SetOutputSpacing(current->GetSpacing());
+    stencilImage->SetOutputWholeExtent(current->GetExtent());
     stencilImage->Update();
 
     vtkNew<vtkImageStencil> stencil;
-    stencil->SetInputData(original);
+    stencil->SetInputData(current);
     stencil->SetStencilConnection(stencilImage->GetOutputPort());
     stencil->SetBackgroundValue(0);
     stencil->Update();
 
-    vtkNew<vtkImageThreshold> threshold;
-    threshold->SetInputData(stencil->GetOutput());
-    threshold->ThresholdByUpper(1);
-    threshold->SetOutputScalarTypeToUnsignedChar();
-    threshold->ReplaceInOn();
-    threshold->SetInValue(255);
-    threshold->SetOutValue(0);
-    threshold->ReplaceOutOn();
-    threshold->Update();
-
-    volumeMapper->SetCropping(false);
-    volumeMapper->SetMaskInput(threshold->GetOutput());
+    //volumeMapper->SetCropping(false);
+    //current = stencil->GetOutput();
+    volumeMapper->SetInputData(stencil->GetOutput());
   }
 
 }
@@ -491,6 +461,10 @@ bool Render::compareNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node_){
     node = node_;
     return false;
   }
+}
+
+void Render::cropImageFromPlane(){
+
 }
 
 vtkSmartPointer<vtkImageData> Render::getImage(){

@@ -83,6 +83,7 @@ class Render{
     void extractSelectedVOI(double bounds[6], bool localBounds);
     void extractFormedVOI(int type, double *bounds, double *center, double radius, vtkSmartPointer<vtkAbstractTransform> transform);
     void restart();
+    void cropImageFromPlane();
     vtkSmartPointer<vtkImageData> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
     vtkSmartPointer<vtkVolume> getVolume();

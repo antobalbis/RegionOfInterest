@@ -96,9 +96,8 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
       if(key == "j"){
         std::cout << "SE HA PULSADO?? " << key << endl;
 
-        if(bounds[1] > bounds[0] && bounds[3] > bounds[2] && bounds[5] > bounds[4]){
-          render.extractSelectedVOI(bounds, false);
-        }
+        render.extractSelectedVOI(bounds, false);
+
       }
       else if(key == "s"){
         double radius = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
@@ -145,6 +144,7 @@ gui::gui(QWidget *parent)
     ui->setupUi(this);
 
     //render = Render("../headsq/quarter", spacing, dims);
+    op = new OpenFile();
 
     vtkNew<vtkNamedColors> colors;
     renderer = vtkSmartPointer<vtkRenderer>::New();
@@ -216,26 +216,30 @@ void gui::handleButton(){
 }
 
 void gui::openFile(){
+  std::cout << "Abrimos la cosa" << endl;
+  op->exec();
+  loadFile();
+}
+
+void gui::loadFile(){
+
   std::cout << "OK" << endl;
   vtkNew<vtkNamedColors> colors;
 
   double spacing[3];
-  spacing[0] = std::stod(this->ui->sx->toPlainText().toUtf8().constData());
-  spacing[1] = std::stod(this->ui->sy->toPlainText().toUtf8().constData());
-  spacing[2] = std::stod(this->ui->sz->toPlainText().toUtf8().constData());
+  spacing[0] = op->spacing[0];
+  spacing[1] = op->spacing[1];
+  spacing[2] = op->spacing[2];
 
   int dims[3];
-  dims[0] = std::stoi(this->ui->dx->toPlainText().toUtf8().constData());
-  dims[1] = std::stoi(this->ui->dy->toPlainText().toUtf8().constData());
-  dims[2] = std::stoi(this->ui->dz->toPlainText().toUtf8().constData());
+  dims[0] = op->dimensions[0];
+  dims[1] = op->dimensions[1];
+  dims[2] = op->dimensions[2];
 
   std::cout << spacing[0] << " " << spacing[1] << " " << spacing[2] << endl;
   std::cout << dims[0] << " " << dims[1] << " " << dims[2] << endl;
 
-  //double spacing[3] = {3.2, 3.2, 1.5};
-  //int dims[3] = {64, 64, 93};
-
-  char* path = this->ui->filePath->toPlainText().toUtf8().data();
+  char* path = op->path;
   render = Render(path, spacing, dims);
 
   vtkNew<vtkBoxWidget2> boxWidget;
