@@ -1,5 +1,6 @@
 #include "gui.h"
 #include "ui_gui.h"
+#include <vector>
 #include <vtkBorderWidget.h>
 #include <vtkCommand.h>
 #include <vtkGenericOpenGLRenderWindow.h>
@@ -239,8 +240,12 @@ void gui::loadFile(){
   std::cout << spacing[0] << " " << spacing[1] << " " << spacing[2] << endl;
   std::cout << dims[0] << " " << dims[1] << " " << dims[2] << endl;
 
+  std::vector<double> intensities = op->intensities;
+  std::vector<std::string> colores = op->colors;
+  std::vector<double> opacities = op->opacities;
+
   char* path = op->path;
-  render = Render(path, spacing, dims);
+  render = Render(path, spacing, dims, intensities, colores, opacities);
 
   vtkNew<vtkBoxWidget2> boxWidget;
   boxWidget->SetInteractor(this->ui->qvtkWidget->interactor());

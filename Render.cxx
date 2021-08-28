@@ -25,7 +25,8 @@
 #include "Render.h"
 
 Render::Render(){}
-Render::Render(char *argv, double spacing[3], int dims[3]){
+Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> intensities,
+  std::vector<std::string> colores, std::vector<double> opacities){
   //create volume reader
   std::cout << argv << endl;
 
@@ -46,14 +47,14 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
   vtkNew<vtkNamedColors> colors;
 
   vtkNew<vtkPiecewiseFunction> opacityTransferFunction;
-  opacityTransferFunction->AddPoint(499, 0);
+  /*opacityTransferFunction->AddPoint(499, 0);
   opacityTransferFunction->AddPoint(500, 1.);
   opacityTransferFunction->AddPoint(1150, 1.);
-  opacityTransferFunction->AddPoint(1900, 1.);
+  opacityTransferFunction->AddPoint(1900, 1.);*/
 
   // Create transfer mapping scalar value to color
   vtkNew<vtkColorTransferFunction> colorTransferFunction;
-  colorTransferFunction->AddRGBPoint(1900.0, colors->GetColor3d("ivory").GetData()[0],
+  /*colorTransferFunction->AddRGBPoint(1900.0, colors->GetColor3d("ivory").GetData()[0],
                                             colors->GetColor3d("ivory").GetData()[1],
                                             colors->GetColor3d("ivory").GetData()[2]);
   colorTransferFunction->AddRGBPoint(1150, colors->GetColor3d("lblue").GetData()[0],
@@ -61,7 +62,14 @@ Render::Render(char *argv, double spacing[3], int dims[3]){
                                             colors->GetColor3d("blue").GetData()[2]);
   colorTransferFunction->AddRGBPoint(500.0, colors->GetColor3d("flesh").GetData()[0],
                                             colors->GetColor3d("flesh").GetData()[1],
-                                            colors->GetColor3d("flesh").GetData()[2]);
+                                            colors->GetColor3d("flesh").GetData()[2]);*/
+
+  for(int i = 0; i < intensities.size(); i++){
+    opacityTransferFunction->AddPoint(intensities.at(i), opacities.at(i));
+    colorTransferFunction->AddRGBPoint(intensities.at(i), colors->GetColor3d(colores.at(i))[0],
+                                                          colors->GetColor3d(colores.at(i))[1],
+                                                          colors->GetColor3d(colores.at(i))[2]);
+  }
 
   //Create volume property and adding color and opaccity transfer functions.
   volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();

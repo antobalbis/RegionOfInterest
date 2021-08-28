@@ -4,6 +4,8 @@
 #include <QDoubleValidator>
 #include <QIntValidator>
 #include <iostream>
+#include <vtkNamedColors.h>
+#include <vtkNew.h>
 
 OpenFile::OpenFile(QWidget *parent) :
     QDialog(parent),
@@ -21,11 +23,20 @@ OpenFile::OpenFile(QWidget *parent) :
     this->ui->yDim->setValidator(sd);
     this->ui->zDim->setValidator(sd);
 
+    QValidator *civ = new QDoubleValidator(this);
+    this->ui->intensity->setValidator(civ);
+    this->ui->opacity->setValidator(civ);
+
+    vtkNew<vtkNamedColors> colors;
+    std::string colors_ = colors->GetColorNames();
+    this->ui->colorslist->document()->setPlainText(QString::fromUtf8(colors_.c_str()));
 
     connect(this->ui->buttonBox->button(QDialogButtonBox::Ok), SIGNAL(released()), this, SLOT(accept()));
     connect(this->ui->buttonBox->button(QDialogButtonBox::Cancel), SIGNAL(released()), this, SLOT(close()));
     connect(this->ui->selectfile, SIGNAL(released()), this, SLOT(selectfile()));
     connect(this->ui->selectdir, SIGNAL(released()), this, SLOT(selectdir()));
+    connect(this->ui->addic, SIGNAL(released()), this, SLOT(addIntensityColorOpacity()));
+    connect(this->ui->delic, SIGNAL(released()), this, SLOT(removeIntensityColorOpacity()));
 }
 
 OpenFile::~OpenFile()
@@ -59,6 +70,11 @@ void OpenFile::accept(){
   }else if(!this->ui->DirSelection->toPlainText().isEmpty()){
     path = this->ui->DirSelection->toPlainText().toUtf8().data();
   }
+
+  for(int i = 0; i < intensities.size(); i++){
+    std::cout << intensities.at(i) << " " << colors.at(i) << " " << opacities.at(i) << std::endl;
+  }
+
   this->hide();
 }
 
@@ -96,5 +112,25 @@ void OpenFile::selectdir(){
     pclose(file);
   }else{
     this->ui->DirSelection->setText("");
+  }
+}
+
+void OpenFile::addIntensityColorOpacity(){
+  std::string intensity = this->ui->intensity->text().toUtf8().data();
+  std::string color = this->ui->color->text().toUtf8().data();
+  std::string opacity = this->ui->opacity->text().toUtf8().data();
+
+  if(!intensity.empty() && !color.empty() && !opacity.empty()){
+    intensities.push_back(std::stod(intensity));
+    colors.push_back(color);
+    opacities.push_back(std::stod(opacity));
+  }
+}
+
+void OpenFile::removeIntensityColorOpacity(){
+  if(intensities.size() != 0 && colors.size() != 0 && opacities.size() != 0){
+    intensities.pop_back();
+    colors.pop_back();
+    opacities.pop_back();
   }
 }

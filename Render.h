@@ -1,3 +1,4 @@
+#include <vector>
 #include <vtkCamera.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkVolume16Reader.h>
@@ -75,7 +76,8 @@ class Render{
 
   public:
     Render();
-    Render(char *argv, double spacing[3], int dims[3]);
+    Render(char *argv, double spacing[3], int dims[3], std::vector<double> intensities,
+      std::vector<std::string> colores, std::vector<double> opacities);
 	  void graphicPipeline();
 	  void getRegionOfInterest(int bounds[6]);
     void fixDataBounds(double bounds[6]);

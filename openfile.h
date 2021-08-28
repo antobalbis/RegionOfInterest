@@ -2,6 +2,7 @@
 #define OPENFILE_H
 
 #include <QDialog>
+#include <vector>
 
 namespace Ui {
 class OpenFile;
@@ -15,6 +16,9 @@ public:
     char *path;
     double spacing[3];
     int dimensions[3];
+    std::vector<double> intensities;
+    std::vector<std::string> colors;
+    std::vector<double> opacities;
 
     explicit OpenFile(QWidget *parent = nullptr);
     virtual ~OpenFile();
@@ -27,6 +31,8 @@ private slots:
   void close();
   void selectfile();
   void selectdir();
+  void addIntensityColorOpacity();
+  void removeIntensityColorOpacity();
 
 };
 
