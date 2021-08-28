@@ -47,11 +47,12 @@ else()
   set(CMAKE_AUTOUIC ON)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/GUI
+                    ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-file(GLOB UI_FILES *.ui)
-file(GLOB QT_WRAP *.h)
-file(GLOB CXX_FILES *.cxx)
+file(GLOB UI_FILES ./GUI/*.ui)
+file(GLOB QT_WRAP ./include/*.h)
+file(GLOB CXX_FILES ./src/*.cxx)
 
 # For VTK versions greater than or equal to 8.90.0:
 #  CMAKE_AUTOUIC is ON so we handle uic automatically for Qt targets.
