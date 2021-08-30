@@ -475,6 +475,22 @@ void Render::cropImageFromPlane(){
 
 }
 
+void Render::addFunctionValue(double intensity, std::string color, double opacity){
+  vtkNew<vtkNamedColors> colors;
+  volumeProperty->GetScalarOpacity()->AddPoint(intensity, opacity);
+  volumeProperty->GetRGBTransferFunction()->AddRGBPoint(intensity, colors->GetColor3d(color)[0],
+                                                        colors->GetColor3d(color)[1],
+                                                        colors->GetColor3d(color)[2]);
+
+  volume->Update();
+}
+
+void Render::removeFunctionValue(double intensity){
+    volumeProperty->GetScalarOpacity()->RemovePoint(intensity);
+    volumeProperty->GetRGBTransferFunction()->RemovePoint(intensity);
+    volume->Update();
+}
+
 vtkSmartPointer<vtkImageData> Render::getImage(){
   return current;
 }

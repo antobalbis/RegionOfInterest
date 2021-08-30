@@ -75,66 +75,10 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
-       <widget class="QTextEdit" name="iText">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="1">
-       <widget class="QTextEdit" name="jText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="11" column="1">
-       <widget class="QTextEdit" name="kText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
       <item row="14" column="0" colspan="2">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>Dimensions</string>
-        </property>
-       </widget>
-      </item>
-      <item row="18" column="1">
-       <widget class="QTextEdit" name="lengthText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="21" column="1">
-       <widget class="QTextEdit" name="widthText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
         </property>
        </widget>
       </item>
@@ -159,30 +103,10 @@
         </property>
        </widget>
       </item>
-      <item row="37" column="1">
-       <widget class="QTextEdit" name="intText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
       <item row="38" column="0">
        <widget class="QLabel" name="label_12">
         <property name="text">
          <string>color:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="38" column="1">
-       <widget class="QTextEdit" name="colorText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
         </property>
        </widget>
       </item>
@@ -203,16 +127,6 @@
         </property>
        </widget>
       </item>
-      <item row="39" column="1">
-       <widget class="QTextEdit" name="opText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
       <item row="39" column="0">
        <widget class="QLabel" name="label_13">
         <property name="text">
@@ -221,26 +135,16 @@
        </widget>
       </item>
       <item row="42" column="0">
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="addButton">
         <property name="text">
          <string>ADD</string>
         </property>
        </widget>
       </item>
       <item row="42" column="1">
-       <widget class="QPushButton" name="pushButton_3">
+       <widget class="QPushButton" name="deleteButton">
         <property name="text">
          <string>DELETE</string>
-        </property>
-       </widget>
-      </item>
-      <item row="25" column="1">
-       <widget class="QTextEdit" name="depthText">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
         </property>
        </widget>
       </item>
@@ -291,6 +195,102 @@
       </item>
       <item row="36" column="0" colspan="2">
        <widget class="QPlainTextEdit" name="colorsList"/>
+      </item>
+      <item row="39" column="1">
+       <widget class="QTextEdit" name="opText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="38" column="1">
+       <widget class="QTextEdit" name="colorText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="37" column="1">
+       <widget class="QTextEdit" name="intText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="25" column="1">
+       <widget class="QTextEdit" name="depthText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="21" column="1">
+       <widget class="QTextEdit" name="widthText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="18" column="1">
+       <widget class="QTextEdit" name="lengthText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="11" column="1">
+       <widget class="QTextEdit" name="kText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QTextEdit" name="jText">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QTextEdit" name="iText">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

@@ -13,6 +13,8 @@ OpenFile::OpenFile(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    path = new char[1024];
+
     QValidator *sv = new QDoubleValidator(0, 10000, 10, this);
     this->ui->xSpace->setValidator(sv);
     this->ui->ySpace->setValidator(sv);
@@ -65,11 +67,29 @@ void OpenFile::accept(){
     dimensions[2] = std::stoi(dimz);
   }
 
+  std::string file = "";
+  std::string dir = "";
+
+  //std::string file = this->ui->FileSelection->toPlainText().toUtf8().data();
+  //std::string dir = this->ui->DirSelection->toPlainText().toUtf8().data();
+
+  std::cout << "HASTA AQUI BIEN\n";
+
   if(!this->ui->FileSelection->toPlainText().isEmpty()){
-    path = this->ui->FileSelection->toPlainText().toUtf8().data();
+    file = this->ui->FileSelection->toPlainText().toUtf8().data();
   }else if(!this->ui->DirSelection->toPlainText().isEmpty()){
-    path = this->ui->DirSelection->toPlainText().toUtf8().data();
+    dir = this->ui->DirSelection->toPlainText().toUtf8().data();
   }
+
+  std::cout << "GetValueFromTextFields\n";
+
+  if(!file.empty()){
+    path = strcpy(path, file.c_str());
+  }else if(!dir.empty()){
+    path = strcpy(path, dir.c_str());
+  }
+
+  std::cout << "STILL FINE\n";
 
   for(int i = 0; i < intensities.size(); i++){
     std::cout << intensities.at(i) << " " << colors.at(i) << " " << opacities.at(i) << std::endl;

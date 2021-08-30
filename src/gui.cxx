@@ -189,6 +189,17 @@ gui::gui(QWidget *parent)
 
     connect(this->ui->pushButton, SIGNAL(released()), this, SLOT(handleButton()));
     connect(this->ui->openButton, SIGNAL(released()), this, SLOT(openFile()));
+    connect(this->ui->addButton, SIGNAL(released()), this, SLOT(addFunctionValue()));
+    connect(this->ui->deleteButton, SIGNAL(released()), this, SLOT(removeFunctionValue()));
+
+    /*this->ui->intText->setValidator(doubleValidator);
+    this->ui->oText->setValidator(doubleValidator);
+    this->ui->iText->setValidator(doubleValidator);
+    this->ui->jText->setValidator(doubleValidator);
+    this->ui->kText->setValidator(doubleValidator);
+    this->ui->lengthText->setValidator(doubleValidator);
+    this->ui->widthText->setValidator(doubleValidator);
+    this->ui->depthText->setValidator(doubleValidator);*/
 }
 
 void gui::handleButton(){
@@ -220,6 +231,45 @@ void gui::openFile(){
   std::cout << "Abrimos la cosa" << endl;
   op->exec();
   loadFile();
+}
+
+bool gui::isANumber(std::string text){
+  bool isNumber = !text.empty();
+  int nComas = 0;
+
+  std::string::iterator it = text.begin();
+  for(; it != text.end() && isNumber; it++){
+    isNumber = std::isdigit(*it) || *it == ',';
+    if(*it == ',') nComas++;
+  }
+
+  if(nComas > 1) isNumber = false;
+
+  if(isNumber) cout << "still a number" << endl;
+  else cout << "not a number" << endl;
+  return isNumber;
+}
+
+void gui::addFunctionValue(){
+  std::string iText = this->ui->intText->toPlainText().toUtf8().data();
+  std::string cText = this->ui->colorText->toPlainText().toUtf8().data();
+  std::string oText = this->ui->opText->toPlainText().toUtf8().data();
+
+  std::cout << "intensity: " << iText << " color: " << cText << " opacity: " << oText << endl;
+
+  if(isANumber(iText) && isANumber(oText)){
+    std::cout << "let's do some things" << endl;
+    if(!iText.empty() && !cText.empty() && !oText.empty()){
+      render.addFunctionValue(std::stod(iText), cText, std::stod(oText));
+      renWin->Render();
+    }
+  }
+}
+
+void gui::removeFunctionValue(){
+  std::string iText = this->ui->intText->toPlainText().toUtf8().data();
+  render.removeFunctionValue(std::stod(iText));
+  renWin->Render();
 }
 
 void gui::loadFile(){

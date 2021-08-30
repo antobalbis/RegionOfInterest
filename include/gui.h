@@ -23,6 +23,8 @@ private slots:
     void handleButton();
     void openFile();
     void loadFile();
+    void addFunctionValue();
+    void removeFunctionValue();
 private:
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
     vtkSmartPointer<vtkImageShrink3D> shrink;
@@ -32,5 +34,6 @@ private:
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
     vtkSmartPointer<vtkRenderer> renderer;
     Ui::gui *ui;
+    bool isANumber(std::string text);
 };
 #endif // GUI_H
