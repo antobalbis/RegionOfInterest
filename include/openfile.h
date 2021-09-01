@@ -16,6 +16,7 @@ public:
     char *path;
     double spacing[3];
     int dimensions[3];
+    bool isFile = false;
     std::vector<double> intensities;
     std::vector<std::string> colors;
     std::vector<double> opacities;

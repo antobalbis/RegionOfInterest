@@ -77,8 +77,10 @@ void OpenFile::accept(){
 
   if(!this->ui->FileSelection->toPlainText().isEmpty()){
     file = this->ui->FileSelection->toPlainText().toUtf8().data();
+    isFile = true;
   }else if(!this->ui->DirSelection->toPlainText().isEmpty()){
     dir = this->ui->DirSelection->toPlainText().toUtf8().data();
+    isFile = false;
   }
 
   std::cout << "GetValueFromTextFields\n";

@@ -1,4 +1,6 @@
 #include <vtkContourFilter.h>
+#include <vtkImageReader.h>
+#include <vtkMetaImageReader.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkGenericCell.h>
 #include <vtkPointSource.h>
@@ -22,11 +24,12 @@
 #include <vtkProbeFilter.h>
 #include <vtkSphere.h>
 #include <vtkCutter.h>
+#include <QDoubleValidator>
 #include "Render.h"
 
 Render::Render(){}
 Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> intensities,
-  std::vector<std::string> colores, std::vector<double> opacities){
+  std::vector<std::string> colores, std::vector<double> opacities, bool file){
   //create volume reader
   std::cout << argv << endl;
 
@@ -39,10 +42,8 @@ Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> i
   this->level = 0;
   this->factor = 1;
 
-  //readDataFromFile(argv, 64, 64, 93);
-  readDataFromDir(argv, dims[0], dims[1], dims[2], 1);
-  //readDICOMImage(argv, dims[0], dims[1], dims[2], 1);
-  //readNrrdImage(argv);
+  if(file) readDataFromFile(argv, dims[0], dims[1], dims[2]);
+  else readDataFromDir(argv, dims[0], dims[1], dims[2], 1);
 
   vtkNew<vtkNamedColors> colors;
 
@@ -81,8 +82,8 @@ Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> i
   //Extract contour (surface representation) of the object withing the volume.
   vtkNew<vtkContourFilter> contourFilter;
   contourFilter->SetInputConnection(shrink->GetOutputPort());
-  contourFilter->SetValue(0, 500);
-  contourFilter->SetValue(1, 1150);
+  contourFilter->SetValue(0, intensities[0]);
+  contourFilter->SetValue(1, intensities[1]);
   contourFilter->Update();
 
   //Define normals of the surface representation
@@ -138,6 +139,7 @@ void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_
   reader->SetDataDimensions (dims[0], dims[1]);
   reader->SetImageRange (1, dims[2]);
   reader->SetFilePrefix(path);
+  //reader->SetFilePattern(".dmc");
   reader->SetDataSpacing (spacing[0], spacing[1], spacing[2]);
 
   shrink = vtkSmartPointer<vtkImageShrink3D>::New();
@@ -157,7 +159,6 @@ void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_
 }
 
 void Render::readDICOMImage(char* path, int x_dim, int y_dim, int z_dim, int z_init){
-
   vtkNew<vtkDICOMImageReader> reader;
   reader->SetFileName(path);
   reader->Update();
@@ -166,23 +167,29 @@ void Render::readDICOMImage(char* path, int x_dim, int y_dim, int z_dim, int z_i
   shrink->SetInputConnection(reader->GetOutputPort());
   shrink->SetShrinkFactors(1, 1, 1);
   shrink->Update();
+
+  original = shrink->GetOutput();
+  current = shrink->GetOutput();
 }
 
 //Read volume from file.
 void Render::readDataFromFile(char* path, int x_dim, int y_dim, int z_dim){
-  dims[0] = 511;
-  dims[1] = 511;
-  dims[2] = 511;
-
   vtkNew<vtkImageReader2> reader;
+  reader->SetFileDimensionality(3);
   reader->SetDataExtent(0, dims[0], 0, dims[1], 0, dims[2]);
   reader->SetFileName(path);
   reader->SetDataSpacing (spacing[0], spacing[1], spacing[2]);
+  reader->SetDataScalarTypeToUnsignedChar();
+  reader->SetDataByteOrderToBigEndian();
+  reader->Update();
 
   shrink = vtkSmartPointer<vtkImageShrink3D>::New();
   shrink->SetInputConnection(reader->GetOutputPort());
   shrink->SetShrinkFactors(1, 1, 1);
   shrink->Update();
+
+  original = shrink->GetOutput();
+  current = shrink->GetOutput();
 }
 
 void Render::readNrrdImage(char *path){
@@ -294,7 +301,8 @@ vtkSmartPointer<vtkImageShrink3D> Render::extractVOI(double bounds[6], vtkSmartP
   voi->SetVOI((int) bounds[0], (int) bounds[1], (int) bounds[2], (int) bounds[3], (int) bounds[4], (int) bounds[5]);
   voi->Update();
 
-  factor = voi->GetOutput()->GetActualMemorySize() / maxsize + 1;
+  //factor = voi->GetOutput()->GetActualMemorySize() / maxsize + 1;
+  factor = 1;
   vtkSmartPointer<vtkImageShrink3D> shrink3d = vtkSmartPointer<vtkImageShrink3D>::New();
   shrink3d->SetInputConnection(voi->GetOutputPort());
   shrink3d->SetShrinkFactors(factor, factor, factor);
@@ -493,6 +501,10 @@ void Render::removeFunctionValue(double intensity){
 
 vtkSmartPointer<vtkImageData> Render::getImage(){
   return current;
+}
+
+double *Render::getOriginalBounds(){
+  return original->GetBounds();
 }
 
 vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> Render::getVolumeMapper(){

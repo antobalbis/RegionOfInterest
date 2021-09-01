@@ -14,6 +14,7 @@
 #include <vtkVersion.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkContourFilter.h>
+#include <QDoubleValidator>
 
 class vtkMyCallback : public vtkCommand
 {
@@ -192,26 +193,31 @@ gui::gui(QWidget *parent)
     connect(this->ui->addButton, SIGNAL(released()), this, SLOT(addFunctionValue()));
     connect(this->ui->deleteButton, SIGNAL(released()), this, SLOT(removeFunctionValue()));
 
-    /*this->ui->intText->setValidator(doubleValidator);
-    this->ui->oText->setValidator(doubleValidator);
+    QValidator *doubleValidator = new QDoubleValidator(this);
+
+    this->ui->intText->setValidator(doubleValidator);
+    this->ui->opText->setValidator(doubleValidator);
     this->ui->iText->setValidator(doubleValidator);
     this->ui->jText->setValidator(doubleValidator);
     this->ui->kText->setValidator(doubleValidator);
     this->ui->lengthText->setValidator(doubleValidator);
     this->ui->widthText->setValidator(doubleValidator);
-    this->ui->depthText->setValidator(doubleValidator);*/
+    this->ui->depthText->setValidator(doubleValidator);
+
+    std::string colors_ = colors->GetColorNames();
+    this->ui->colorsList->document()->setPlainText(QString::fromUtf8(colors_.c_str()));
 }
 
 void gui::handleButton(){
-  double initI = std::stod(this->ui->iText->toPlainText().toUtf8().constData());
-  double initJ = std::stod(this->ui->jText->toPlainText().toUtf8().constData());
-  double initK = std::stod(this->ui->kText->toPlainText().toUtf8().constData());
+  double initI = std::stod(this->ui->iText->text().toUtf8().constData());
+  double initJ = std::stod(this->ui->jText->text().toUtf8().constData());
+  double initK = std::stod(this->ui->kText->text().toUtf8().constData());
 
-  double length = std::stod(this->ui->lengthText->toPlainText().toUtf8().constData());
-  double width = std::stod(this->ui->widthText->toPlainText().toUtf8().constData());
-  double depth = std::stod(this->ui->depthText->toPlainText().toUtf8().constData());
+  double length = std::stod(this->ui->lengthText->text().toUtf8().constData());
+  double width = std::stod(this->ui->widthText->text().toUtf8().constData());
+  double depth = std::stod(this->ui->depthText->text().toUtf8().constData());
 
-  int* dims = render.getImage()->GetExtent();
+  double* dims = render.getOriginalBounds();
   if(initI < dims[0]) initI = dims[0];
   if(initJ < dims[2]) initJ = dims[2];
   if(initK < dims[4]) initK = dims[4];
@@ -221,7 +227,7 @@ void gui::handleButton(){
 
   if(initI < length && initJ < width && initK < depth){
     double bounds[6] = {initI, length, initJ, width, initK, depth};
-    render.extractSelectedVOI(bounds, true);
+    render.extractSelectedVOI(bounds, false);
   }
   renWin->Render();
   std::cout << initI << " " << initJ << " " << initK << endl;
@@ -231,6 +237,12 @@ void gui::openFile(){
   std::cout << "Abrimos la cosa" << endl;
   op->exec();
   loadFile();
+  std::string values = "";
+  for(int i = 0; i < op->intensities.size(); i++){
+    values = values + "[" + std::to_string(op->intensities[i]) + " " + op->colors[i] + " " + std::to_string(op->opacities[i]) + "]\n";
+  }
+  this->ui->funcValues->document()->setPlainText(QString::fromUtf8(values.c_str()));
+
 }
 
 bool gui::isANumber(std::string text){
@@ -251,9 +263,9 @@ bool gui::isANumber(std::string text){
 }
 
 void gui::addFunctionValue(){
-  std::string iText = this->ui->intText->toPlainText().toUtf8().data();
-  std::string cText = this->ui->colorText->toPlainText().toUtf8().data();
-  std::string oText = this->ui->opText->toPlainText().toUtf8().data();
+  std::string iText = this->ui->intText->text().toUtf8().data();
+  std::string cText = this->ui->colorText->text().toUtf8().data();
+  std::string oText = this->ui->opText->text().toUtf8().data();
 
   std::cout << "intensity: " << iText << " color: " << cText << " opacity: " << oText << endl;
 
@@ -264,10 +276,12 @@ void gui::addFunctionValue(){
       renWin->Render();
     }
   }
+  //std::string text = this->ui->funcValues->plainText().toUtf8().data();
+  //text = text + "[" + iText + " " + cText + " " + oText + "]\n";
 }
 
 void gui::removeFunctionValue(){
-  std::string iText = this->ui->intText->toPlainText().toUtf8().data();
+  std::string iText = this->ui->intText->text().toUtf8().data();
   render.removeFunctionValue(std::stod(iText));
   renWin->Render();
 }
@@ -295,7 +309,16 @@ void gui::loadFile(){
   std::vector<double> opacities = op->opacities;
 
   char* path = op->path;
-  render = Render(path, spacing, dims, intensities, colores, opacities);
+  render = Render(path, spacing, dims, intensities, colores, opacities, op->isFile);
+
+  double *bounds = render.getOriginalBounds();
+  std::string path_(path);
+  std::string string = "Path: " + path_ + " bounds: " + "minX: " + std::to_string(bounds[0]) +
+                        " maxX: " + std::to_string(bounds[1]) + " minY: " + std::to_string(bounds[2]) +
+                        " maxY: " + std::to_string(bounds[3]) + " minZ: " + std::to_string(bounds[4]) +
+                        " maxZ: " + std::to_string(bounds[5]);
+
+  this->ui->infoText->setText(string.c_str());
 
   vtkNew<vtkBoxWidget2> boxWidget;
   boxWidget->SetInteractor(this->ui->qvtkWidget->interactor());

@@ -77,7 +77,7 @@ class Render{
   public:
     Render();
     Render(char *argv, double spacing[3], int dims[3], std::vector<double> intensities,
-      std::vector<std::string> colores, std::vector<double> opacities);
+      std::vector<std::string> colores, std::vector<double> opacities, bool file);
 	  void graphicPipeline();
 	  void getRegionOfInterest(int bounds[6]);
     void fixDataBounds(double bounds[6]);
@@ -88,6 +88,7 @@ class Render{
     void cropImageFromPlane();
     void addFunctionValue(double intensity, std::string color, double opacity);
     void removeFunctionValue(double value);
+    double *getOriginalBounds();
     vtkSmartPointer<vtkImageData> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
     vtkSmartPointer<vtkVolume> getVolume();
