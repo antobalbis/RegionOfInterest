@@ -43,12 +43,9 @@ class Render{
     int dims[3];
     double spacing[3];
 
-    vtkSmartPointer<vtkImageShrink3D> shrink;
     vtkSmartPointer<vtkVolumeProperty> volumeProperty;
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
     vtkSmartPointer<vtkVolume> volume;
-    vtkSmartPointer<vtkOctreePointLocator> octree;
-    vtkSmartPointer<vtkPolyData> octreeRepresentation;
     vtkSmartPointer<vtkPolyDataMapper> polyMapper;
     vtkSmartPointer<vtkImageData> original;
     vtkSmartPointer<vtkImageData> current;
@@ -56,10 +53,11 @@ class Render{
     vtkSmartPointer<vtkOctreePointLocatorNode> node;
 
 
-    void readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_init);
-    void readDataFromFile(char* path, int x_dim, int y_dim, int z_dim);
-    void readDICOMImage(char* path, int x_dim, int y_dim, int z_dim, int z_init);
-    void readNrrdImage(char* path);
+    void readDataFromDir(const char* path, int x_dim, int y_dim, int z_dim, int z_init);
+    void readDataFromFile(const char* path, int x_dim, int y_dim, int z_dim);
+    void readDICOMImage(const char* path, int x_dim, int y_dim, int z_dim, int z_init);
+    void readNrrdImage(const char* path);
+    void readDataFromHeader(const char* path);
     void deleteOutsideRegion();
     vtkSmartPointer<vtkExtractVOI> fixImage();
     vtkSmartPointer<vtkImageShrink3D> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
@@ -76,7 +74,7 @@ class Render{
 
   public:
     Render();
-    Render(char *argv, double spacing[3], int dims[3], std::vector<double> intensities,
+    Render(std::string path, double spacing[3], int dims[3], std::vector<double> intensities,
       std::vector<std::string> colores, std::vector<double> opacities, bool file);
 	  void graphicPipeline();
 	  void getRegionOfInterest(int bounds[6]);
@@ -92,6 +90,5 @@ class Render{
     vtkSmartPointer<vtkImageData> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
     vtkSmartPointer<vtkVolume> getVolume();
-    vtkSmartPointer<vtkPolyData> getOctreeRepresentation();
     vtkSmartPointer<vtkPolyDataMapper> getSurfaceMapper();
 };

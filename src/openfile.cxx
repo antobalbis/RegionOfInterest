@@ -77,10 +77,10 @@ void OpenFile::accept(){
 
   if(!this->ui->FileSelection->toPlainText().isEmpty()){
     file = this->ui->FileSelection->toPlainText().toUtf8().data();
-    isFile = true;
+    this->file = true;
   }else if(!this->ui->DirSelection->toPlainText().isEmpty()){
     dir = this->ui->DirSelection->toPlainText().toUtf8().data();
-    isFile = false;
+    this->file = false;
   }
 
   std::cout << "GetValueFromTextFields\n";
@@ -96,11 +96,12 @@ void OpenFile::accept(){
   for(int i = 0; i < intensities.size(); i++){
     std::cout << intensities.at(i) << " " << colors.at(i) << " " << opacities.at(i) << std::endl;
   }
-
+  ok = true;
   this->hide();
 }
 
 void OpenFile::close(){
+  ok = false;
   this->hide();
 }
 
@@ -110,7 +111,9 @@ void OpenFile::selectfile(){
 
   if(file != NULL){
     if(fgets(fileName, 1024, file) != NULL){
-      this->ui->FileSelection->setText(fileName);
+      std::string fix_file = fileName;
+      fix_file = fix_file.substr(0, fix_file.find('\n'));
+      this->ui->FileSelection->setText(fix_file.c_str());
     }else{
       this->ui->FileSelection->setText("");
     }
@@ -127,7 +130,9 @@ void OpenFile::selectdir(){
 
   if(file != NULL){
     if(fgets(fileName, 1024, file) != NULL){
-      this->ui->DirSelection->setText(fileName);
+      std::string fix_file = fileName;
+      fix_file = fix_file.substr(0, fix_file.find('\n'));
+      this->ui->DirSelection->setText(fix_file.c_str());
     }else{
       this->ui->DirSelection->setText("");
     }
@@ -156,3 +161,17 @@ void OpenFile::removeIntensityColorOpacity(){
     opacities.pop_back();
   }
 }
+
+void OpenFile::reject(){
+  ok = false;
+  QDialog::reject();
+}
+
+char* OpenFile::getPath(){return path;}
+double* OpenFile::getSpacing(){return spacing;}
+int* OpenFile::getDimensions(){return dimensions;}
+std::vector<double> OpenFile::getIntensities(){return intensities;}
+std::vector<std::string> OpenFile::getColors(){return colors;}
+std::vector<double> OpenFile::getOpacities(){return opacities;}
+bool OpenFile::isOk(){return ok;}
+bool OpenFile::isFile(){return file;}

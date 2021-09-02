@@ -234,15 +234,15 @@ void gui::handleButton(){
 }
 
 void gui::openFile(){
-  std::cout << "Abrimos la cosa" << endl;
   op->exec();
-  loadFile();
-  std::string values = "";
-  for(int i = 0; i < op->intensities.size(); i++){
-    values = values + "[" + std::to_string(op->intensities[i]) + " " + op->colors[i] + " " + std::to_string(op->opacities[i]) + "]\n";
+  if(op->isOk()){
+    loadFile();
+    std::string values = "";
+    for(int i = 0; i < op->getIntensities().size(); i++){
+      values = values + "[" + std::to_string(op->getIntensities()[i]) + " " + op->getColors()[i] + " " + std::to_string(op->getOpacities()[i]) + "]\n";
+    }
+    this->ui->funcValues->document()->setPlainText(QString::fromUtf8(values.c_str()));
   }
-  this->ui->funcValues->document()->setPlainText(QString::fromUtf8(values.c_str()));
-
 }
 
 bool gui::isANumber(std::string text){
@@ -292,24 +292,24 @@ void gui::loadFile(){
   vtkNew<vtkNamedColors> colors;
 
   double spacing[3];
-  spacing[0] = op->spacing[0];
-  spacing[1] = op->spacing[1];
-  spacing[2] = op->spacing[2];
+  spacing[0] = op->getSpacing()[0];
+  spacing[1] = op->getSpacing()[1];
+  spacing[2] = op->getSpacing()[2];
 
   int dims[3];
-  dims[0] = op->dimensions[0];
-  dims[1] = op->dimensions[1];
-  dims[2] = op->dimensions[2];
+  dims[0] = op->getDimensions()[0];
+  dims[1] = op->getDimensions()[0];
+  dims[2] = op->getDimensions()[0];
 
   std::cout << spacing[0] << " " << spacing[1] << " " << spacing[2] << endl;
   std::cout << dims[0] << " " << dims[1] << " " << dims[2] << endl;
 
-  std::vector<double> intensities = op->intensities;
-  std::vector<std::string> colores = op->colors;
-  std::vector<double> opacities = op->opacities;
+  std::vector<double> intensities = op->getIntensities();
+  std::vector<std::string> colores = op->getColors();
+  std::vector<double> opacities = op->getOpacities();
 
-  char* path = op->path;
-  render = Render(path, spacing, dims, intensities, colores, opacities, op->isFile);
+  char* path = op->getPath();
+  render = Render(path, spacing, dims, intensities, colores, opacities, op->isFile());
 
   double *bounds = render.getOriginalBounds();
   std::string path_(path);
@@ -344,13 +344,16 @@ void gui::loadFile(){
   this->boxWidget = boxWidget;
   this->boxWidget->On();
 
-  vtkNew<vtkActor> polyActor;
-  polyActor->SetMapper(render.getSurfaceMapper());
-  polyActor->GetProperty()->SetInterpolationToFlat();
-  polyActor->GetProperty()->SetOpacity(0.2);
-  polyActor->GetProperty()->SetColor(
-    colors->GetColor4d("flesh").GetData()
-  );
+  if(op->getIntensities().size() > 0){
+    vtkNew<vtkActor> polyActor;
+    polyActor->SetMapper(render.getSurfaceMapper());
+    polyActor->GetProperty()->SetInterpolationToFlat();
+    polyActor->GetProperty()->SetOpacity(0.2);
+    polyActor->GetProperty()->SetColor(
+      colors->GetColor4d("flesh").GetData()
+    );
+    renderer->AddActor(polyActor);
+  }
 
   /*vtkNew<vtkPolyDataMapper> polyMapper;
   polyMapper->SetInputData(render.getOctreeRepresentation());
@@ -363,7 +366,6 @@ void gui::loadFile(){
     colors->GetColor4d("green").GetData()
   );*/
 
-  renderer->AddActor(polyActor);
   renderer->AddVolume(render.getVolume());
   renderer->ResetCameraClippingRange();
   renderer->ResetCamera();

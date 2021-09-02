@@ -28,10 +28,10 @@
 #include "Render.h"
 
 Render::Render(){}
-Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> intensities,
+Render::Render(std::string path, double spacing[3], int dims[3], std::vector<double> intensities,
   std::vector<std::string> colores, std::vector<double> opacities, bool file){
   //create volume reader
-  std::cout << argv << endl;
+  std::cout << path << endl;
 
   this->dims[0] = dims[0];
   this->dims[1] = dims[1];
@@ -42,8 +42,13 @@ Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> i
   this->level = 0;
   this->factor = 1;
 
-  if(file) readDataFromFile(argv, dims[0], dims[1], dims[2]);
-  else readDataFromDir(argv, dims[0], dims[1], dims[2], 1);
+  if(file){
+    if(path.find(".raw") != std::string::npos)
+      readDataFromFile(path.c_str(), dims[0], dims[1], dims[2]);
+    else if(path.find(".nrrd") != std::string::npos)
+      readNrrdImage(path.c_str());
+    else readDataFromHeader(path.c_str());
+  }else readDataFromDir(path.c_str(), dims[0], dims[1], dims[2], 1);
 
   vtkNew<vtkNamedColors> colors;
 
@@ -79,51 +84,38 @@ Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> i
   volumeProperty->ShadeOn();
   volumeProperty->SetInterpolationTypeToLinear();
 
-  //Extract contour (surface representation) of the object withing the volume.
-  vtkNew<vtkContourFilter> contourFilter;
-  contourFilter->SetInputConnection(shrink->GetOutputPort());
-  contourFilter->SetValue(0, intensities[0]);
-  contourFilter->SetValue(1, intensities[1]);
-  contourFilter->Update();
+  if(intensities.size() > 0){
+    //Extract contour (surface representation) of the object withing the volume.
+    vtkNew<vtkContourFilter> contourFilter;
+    contourFilter->SetInputData(original);
+    contourFilter->SetValue(0, intensities[0]);
+    contourFilter->SetValue(1, intensities[1]);
+    contourFilter->Update();
 
-  //Define normals of the surface representation
-  vtkNew<vtkPolyDataNormals> normals;
-  normals->SetInputConnection(contourFilter->GetOutputPort());
-  normals->SetFeatureAngle(60.0);
-  normals->Update();
+    //Define normals of the surface representation
+    vtkNew<vtkPolyDataNormals> normals;
+    normals->SetInputConnection(contourFilter->GetOutputPort());
+    normals->SetFeatureAngle(60.0);
+    normals->Update();
 
-  //We use the surface extracted to define an octree.
-  octree = vtkSmartPointer<vtkOctreePointLocator>::New();
-  octree->SetDataSet(shrink->GetOutput());
-  octree->SetMaxLevel(4);
-  octree->BuildLocator();
-  octreeRepresentation = vtkSmartPointer<vtkPolyData>::New();
-  octree->GenerateRepresentation(4, octreeRepresentation);
+    polyMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    polyMapper->SetInputConnection(normals->GetOutputPort());
+  }
 
-  double *octreeBounds = octree->GetBounds();
   root = vtkSmartPointer<vtkOctreePointLocatorNode>::New();
-  root->SetBounds(octreeBounds);
+  root->SetBounds(original->GetBounds());
   node = root;
   createOctreeNodes(node, 0, 4);
 
-  //vtkSmartPointer<vtkExtractVOI> voi = fixImage();
-
-  //original = shrink->GetOutput();
-  //current = shrink->GetOutput();
-
+  std::cout << "SENDING VOLUME TO MAPPER " << endl;
   //vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
   volumeMapper = vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper>::New();
-  volumeMapper->SetMaskTypeToBinary();
-  volumeMapper->SetMaskInput(nullptr);
   //volumeMapper->SetMaskInput(threshold->GetOutput());
   //volumeMapper->SetInputConnection(accumulator->GetOutputPort());
   volumeMapper->SetInputData(current);
   //volumeMapper->SetInputConnection(voi->GetOutputPort());
   //volumeMapper->SetPartitions(10,10,10);
   //volumeMapper->SetInputData(image);
-
-  polyMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  polyMapper->SetInputConnection(normals->GetOutputPort());
 
   std::cout << volumeMapper->GetInformation() << endl;
 
@@ -134,98 +126,70 @@ Render::Render(char *argv, double spacing[3], int dims[3], std::vector<double> i
 
 //Method to read data from a number of files, we define the directory path and
 //the volume's extent.
-void Render::readDataFromDir(char* path, int x_dim, int y_dim, int z_dim, int z_init){
+void Render::readDataFromDir(const char* path, int x_dim, int y_dim, int z_dim, int z_init){
   vtkNew<vtkVolume16Reader> reader;
   reader->SetDataDimensions (dims[0], dims[1]);
   reader->SetImageRange (1, dims[2]);
   reader->SetFilePrefix(path);
   //reader->SetFilePattern(".dmc");
   reader->SetDataSpacing (spacing[0], spacing[1], spacing[2]);
-
-  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
-  shrink->SetInputConnection(reader->GetOutputPort());
-  shrink->SetShrinkFactors(1, 1, 1);
-  shrink->Update();
+  reader->Update();
 
   original = reader->GetOutput();
 
-  /*std::cout << "SIZE = " << shrink->GetOutput()->GetActualMemorySize() << endl;
-  factor = shrink->GetOutput()->GetActualMemorySize() / maxsize + 1;
-
-  shrink->SetShrinkFactors(factor, factor, factor);
-  shrink->Update();*/
-
-  current = shrink->GetOutput();
+  current = reader->GetOutput();
 }
 
-void Render::readDICOMImage(char* path, int x_dim, int y_dim, int z_dim, int z_init){
+void Render::readDICOMImage(const char* path, int x_dim, int y_dim, int z_dim, int z_init){
   vtkNew<vtkDICOMImageReader> reader;
   reader->SetFileName(path);
   reader->Update();
 
-  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
-  shrink->SetInputConnection(reader->GetOutputPort());
-  shrink->SetShrinkFactors(1, 1, 1);
-  shrink->Update();
-
-  original = shrink->GetOutput();
-  current = shrink->GetOutput();
+  original = reader->GetOutput();
+  current = reader->GetOutput();
 }
 
 //Read volume from file.
-void Render::readDataFromFile(char* path, int x_dim, int y_dim, int z_dim){
+void Render::readDataFromFile(const char* path, int x_dim, int y_dim, int z_dim){
   vtkNew<vtkImageReader2> reader;
   reader->SetFileDimensionality(3);
   reader->SetDataExtent(0, dims[0], 0, dims[1], 0, dims[2]);
   reader->SetFileName(path);
   reader->SetDataSpacing (spacing[0], spacing[1], spacing[2]);
-  reader->SetDataScalarTypeToUnsignedChar();
+  reader->SetDataScalarTypeToUnsignedShort();
   reader->SetDataByteOrderToBigEndian();
   reader->Update();
 
-  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
-  shrink->SetInputConnection(reader->GetOutputPort());
-  shrink->SetShrinkFactors(1, 1, 1);
-  shrink->Update();
-
-  original = shrink->GetOutput();
-  current = shrink->GetOutput();
+  original = reader->GetOutput();
+  current = reader->GetOutput();
 }
 
-void Render::readNrrdImage(char *path){
+void Render::readDataFromHeader(const char* path){
+  vtkNew<vtkMetaImageReader> reader;
+  reader->SetFileName(path);
+  reader->SetDataByteOrderToBigEndian();
+  reader->Update();
+
+  original = reader->GetOutput();
+  current = reader->GetOutput();
+
+  this->dims[0] = original->GetExtent()[0];
+  this->dims[1] = original->GetExtent()[1];
+  this->dims[2] = original->GetExtent()[2];
+  this->spacing[0] = original->GetSpacing()[0];
+  this->spacing[1] = original->GetSpacing()[1];
+  this->spacing[2] = original->GetSpacing()[2];
+}
+
+void Render::readNrrdImage(const char *path){
   vtkNew<vtkNrrdReader> reader;
   reader->SetFileName(path);
+  reader->Update();
 
-  shrink = vtkSmartPointer<vtkImageShrink3D>::New();
-  shrink->SetInputConnection(reader->GetOutputPort());
-  shrink->SetShrinkFactors(1, 1, 1);
-  shrink->Update();
+  original = reader->GetOutput();
+  current = reader->GetOutput();
 }
 
-/*vtkSmartPointer<vtkExtractVOI> Render::fixImage(){
-  octreeRepresentation->ComputeBounds();
-  double *bounds = octreeRepresentation->GetBounds();
-  double *bounds_ = shrink->GetOutput()->GetBounds();
-
-  if(bounds[0] < bounds_[0]) bounds[0] = bounds_[0];
-  if(bounds[1] > bounds_[1]) bounds[1] = bounds_[1];
-  if(bounds[2] < bounds_[2]) bounds[2] = bounds_[2];
-  if(bounds[3] > bounds_[3]) bounds[3] = bounds_[3];
-  if(bounds[4] < bounds_[4]) bounds[4] = bounds_[4];
-  if(bounds[5] > bounds_[5]) bounds[5] = bounds_[5];
-
-  double minBounds[3] = {bounds[0], bounds[2], bounds[4]};
-  double maxBounds[3] = {bounds[1], bounds[3], bounds[5]};
-  double minPoint[3];
-  double maxPoint[3];
-
-  shrink->GetOutput()->TransformPhysicalPointToContinuousIndex(minBounds, minPoint);
-  shrink->GetOutput()->TransformPhysicalPointToContinuousIndex(maxBounds, maxPoint);
-
-  double _bounds[6] = {minPoint[0], maxPoint[0], minPoint[1], maxPoint[1], minPoint[2], maxPoint[2]};
-
-  return extractVOI(_bounds, shrink->GetOutput());
-}*/
 
 void Render::extractSelectedVOI(double bounds[6], bool localBounds){
   double *_bounds = new double[6];
@@ -360,9 +324,8 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
     stencil->SetBackgroundValue(0);
     stencil->Update();
 
-    //volumeMapper->SetCropping(false);
-    //current = stencil->GetOutput();
-    volumeMapper->SetInputData(stencil->GetOutput());
+    current = stencil->GetOutput();
+    volumeMapper->SetInputData(current);
   }
 
 }
@@ -371,10 +334,7 @@ void Render::restart(){
   current = original;
   node = root;
 
-  shrink->SetInputData(original);
-  shrink->Update();
-
-  volumeMapper->SetInputConnection(shrink->GetOutputPort());
+  volumeMapper->SetInputData(original);
   volumeMapper->SetCropping(false);
   volumeMapper->SetMaskInput(nullptr);
 }
@@ -513,10 +473,6 @@ vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> Render::getVolumeMapper(){
 
 vtkSmartPointer<vtkVolume> Render::getVolume(){
   return volume;
-}
-
-vtkSmartPointer<vtkPolyData> Render::getOctreeRepresentation(){
-  return octreeRepresentation;
 }
 
 vtkSmartPointer<vtkPolyDataMapper> Render::getSurfaceMapper(){
