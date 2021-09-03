@@ -48,8 +48,9 @@ class Render{
     vtkSmartPointer<vtkVolume> volume;
     vtkSmartPointer<vtkPolyDataMapper> polyMapper;
     vtkSmartPointer<vtkImageData> original;
-    vtkSmartPointer<vtkImageData> current;
+    vtkSmartPointer<vtkImageShrink3D> current;
     vtkSmartPointer<vtkOctreePointLocatorNode> root;
+    vtkSmartPointer<vtkOctreePointLocatorNode> selected[2];
     vtkSmartPointer<vtkOctreePointLocatorNode> node;
 
 
@@ -59,8 +60,7 @@ class Render{
     void readNrrdImage(const char* path);
     void readDataFromHeader(const char* path);
     void deleteOutsideRegion();
-    vtkSmartPointer<vtkExtractVOI> fixImage();
-    vtkSmartPointer<vtkImageShrink3D> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
+    vtkSmartPointer<vtkExtractVOI> extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet);
     void extractCone();
     void extractSphere(double radius, double *center, double* bounds);
     void extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkAbstractTransform> transform);
@@ -86,6 +86,7 @@ class Render{
     void cropImageFromPlane();
     void addFunctionValue(double intensity, std::string color, double opacity);
     void removeFunctionValue(double value);
+    void refactor(int factor);
     double *getOriginalBounds();
     vtkSmartPointer<vtkImageData> getImage();
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> getVolumeMapper();
