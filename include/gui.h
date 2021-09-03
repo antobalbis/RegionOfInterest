@@ -31,6 +31,7 @@ private:
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
     Render render;
     OpenFile *op;
+    bool automatic = true;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
     vtkSmartPointer<vtkRenderer> renderer;
     Ui::gui *ui;

@@ -16,6 +16,38 @@
 #include <vtkContourFilter.h>
 #include <QDoubleValidator>
 
+
+class FpsObserver : public vtkCommand
+{
+  public:
+    static FpsObserver* New(){
+      return new FpsObserver;
+    }
+    int count = 0;
+    Render render;
+
+    virtual void Execute(vtkObject* caller, unsigned long, void*){
+      vtkSmartPointer<vtkRenderer> renderer = dynamic_cast<vtkRenderer*>(caller);
+      double fps = 1/renderer->GetLastRenderTimeInSeconds();
+      std::cout << "FPS = "  << fps << endl;
+
+      if(fps < 20){
+        //REFACTOR
+        count++;
+        if(count == 5)render.refactor(20/fps + 1);
+      }else if (fps > 60){
+        //REFACTOR
+        count = 0;
+      }else{
+        count = 0;
+      }
+    }
+
+    void setRender(Render render){
+      this->render = render;
+    }
+};
+
 class vtkMyCallback : public vtkCommand
 {
   public:
@@ -149,10 +181,8 @@ gui::gui(QWidget *parent)
     op = new OpenFile();
 
     vtkNew<vtkNamedColors> colors;
-    renderer = vtkSmartPointer<vtkRenderer>::New();
 
     renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
-    renWin->AddRenderer(renderer);
 
     this->ui->qvtkWidget->setRenderWindow(renWin);
 
@@ -173,11 +203,6 @@ gui::gui(QWidget *parent)
 
     //renderer->AddActor(polyActor);
     //renderer->AddActor(octreeActor);
-    renderer->SetBackground(colors->GetColor3d("Wheat").GetData());
-    renderer->GetActiveCamera()->Azimuth(45);
-    renderer->GetActiveCamera()->Elevation(30);
-    renderer->ResetCameraClippingRange();
-    renderer->ResetCamera();
 
     std::cout << "OK2" << endl;
 
@@ -186,7 +211,7 @@ gui::gui(QWidget *parent)
 
     std::cout << "OK3" << endl;
 
-    this->ui->qvtkWidget->renderWindow()->AddRenderer(renderer);
+    //this->ui->qvtkWidget->renderWindow()->AddRenderer(renderer);
 
     connect(this->ui->pushButton, SIGNAL(released()), this, SLOT(handleButton()));
     connect(this->ui->openButton, SIGNAL(released()), this, SLOT(openFile()));
@@ -288,6 +313,9 @@ void gui::removeFunctionValue(){
 
 void gui::loadFile(){
 
+  renderer = vtkSmartPointer<vtkRenderer>::New();
+  renWin->AddRenderer(renderer);
+
   std::cout << "OK" << endl;
   vtkNew<vtkNamedColors> colors;
 
@@ -298,8 +326,8 @@ void gui::loadFile(){
 
   int dims[3];
   dims[0] = op->getDimensions()[0];
-  dims[1] = op->getDimensions()[0];
-  dims[2] = op->getDimensions()[0];
+  dims[1] = op->getDimensions()[1];
+  dims[2] = op->getDimensions()[2];
 
   std::cout << spacing[0] << " " << spacing[1] << " " << spacing[2] << endl;
   std::cout << dims[0] << " " << dims[1] << " " << dims[2] << endl;
@@ -366,7 +394,12 @@ void gui::loadFile(){
     colors->GetColor4d("green").GetData()
   );*/
 
+  vtkSmartPointer<FpsObserver> fps = vtkSmartPointer<FpsObserver>::New();
+  renderer->AddObserver(vtkCommand::EndEvent, fps);
   renderer->AddVolume(render.getVolume());
+  renderer->SetBackground(colors->GetColor3d("Wheat").GetData());
+  renderer->GetActiveCamera()->Azimuth(45);
+  renderer->GetActiveCamera()->Elevation(30);
   renderer->ResetCameraClippingRange();
   renderer->ResetCamera();
   renWin->Render();
