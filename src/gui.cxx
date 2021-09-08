@@ -111,10 +111,11 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     virtual void OnKeyPress(){
       vtkRenderWindowInteractor* interactor = this->Interactor;
       std::string key = interactor->GetKeySym();
+      double* bounds = boxWidget->GetRepresentation()->GetBounds();
 
       vtkSmartPointer<vtkPlanes> transform = vtkSmartPointer<vtkPlanes>::New();
       dynamic_cast<vtkBoxRepresentation*>(boxWidget->GetRepresentation())->GetPlanes(transform);
-      double* bounds = boxWidget->GetRepresentation()->GetBounds();
+
 
       std::cout << "BOUNDS: " << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
 
@@ -122,7 +123,7 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
         std::cout << "SE HA PULSADO?? " << key << endl;
         render.extractSelectedVOI(bounds, false);
       }
-      else if(key == "s"){
+      else if(key == "e"){
         double radius = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
         double center[3];
         center[0] = (bounds[1] + bounds[0])/2;

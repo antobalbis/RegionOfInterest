@@ -266,6 +266,7 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
         bounds_[3] = max_node->GetMaxBounds()[1];
         bounds_[5] = max_node->GetMaxBounds()[2];
 
+        std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
         bounds_ = getLocalBounds(bounds_);
 
         vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
@@ -327,7 +328,7 @@ void Render::extractSphere(double radius, double *center, double *bounds){
   sphere->SetCenter(center);
   sphere->SetRadius(radius);
 
-  std::cout << "center: " << center << " radius: " << radius << endl;
+  std::cout << "center: " << center[0] << " " << center[1] << " " << center[2] << " radius: " << radius << endl;
 
   doExtraction(sphere, bounds, 1);
 }
@@ -354,7 +355,8 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
     stencil->SetBackgroundValue(0);
     stencil->Update();
 
-    volumeMapper->SetMaskInput(stencil->GetOutput());
+    current->SetInputConnection(stencil->GetOutputPort());
+    //volumeMapper->SetMaskInput(stencil->GetOutput());
   }
 
 }
