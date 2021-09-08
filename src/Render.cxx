@@ -247,7 +247,7 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
     bool same = compareNodes(node_);
     std::cout << "LEVEL = " << level << endl;
 
-    /*if(level == 0){
+    if(level == 0){
       double min_point[3] = {bounds[0], bounds[2], bounds[4]};
       double max_point[3] = {bounds[1], bounds[3], bounds[5]};
 
@@ -274,7 +274,7 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
         //volumeMapper->SetInputConnection(voi->GetOutputPort());
       }
 
-    }else*/ if(!same){
+    }else if(!same){
       std::cout << "IS NOT THE SAME" << endl;
       bounds_[0] = node_->GetMinBounds()[0];
       bounds_[2] = node_->GetMinBounds()[1];
