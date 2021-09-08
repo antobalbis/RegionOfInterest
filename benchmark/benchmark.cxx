@@ -12,17 +12,34 @@
 #include <fstream>
 #include "Render.h"
 
+void doBenchmark(Render render, double *bounds, int nTimes, char* path, bool version1, vtkSmartPointer<vtkRenderWindow> window){
+  clock_t init;
+  clock_t end;
+
+  std::ofstream file;
+  file.open(path);
+
+  for(int k = 0; k < 20; k++){
+    if(k != 0) render.restart();
+    init = clock();
+
+    for(int i = 1; i <= nTimes; i++){
+      double bounds_[6] = {bounds[0], bounds[1]/i-1, bounds[2], bounds[3]/i-1, bounds[4], bounds[5]/i-1};
+      render.extractSelectedVOI(bounds_, version1);
+      window->Render();
+    }
+
+    end = clock();
+    file << double(end - init)/CLOCKS_PER_SEC << "\n";
+  }
+  file.close();
+}
+
 int main(int argc, char **argv){
-  if(argc < 8){
-    std::cout << "USAGE: ./benchmark <file_path> spacing[3] dimensions[3]";
+  if(argc < 12){
+    std::cout << "USAGE: ./benchmark <file_path> spacing[3] dimensions[3] nTimes isLocal output isFile";
     return -1;
   }
-
-  std::ofstream fileA;
-  fileA.open("../times/n_octree.txt");
-
-  std::ofstream fileB;
-  fileB.open("../times/y_octree.txt");
 
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   vtkSmartPointer<vtkRenderWindow> renWin = vtkSmartPointer<vtkRenderWindow>::New();
@@ -34,21 +51,47 @@ int main(int argc, char **argv){
 
   double spacing[3];
   int dimensions[3];
-
+  double dims[6];
   std::cout << "READ DATA " << endl;
 
   spacing[0] = std::stod(argv[2]);
   spacing[1] = std::stod(argv[3]);
   spacing[2] = std::stod(argv[4]);
 
-  dimensions[0] = std::atoi(argv[5]);
-  dimensions[1] = std::atoi(argv[6]);
-  dimensions[2] = std::atoi(argv[7]);
+  dimensions[0] = std::stoi(argv[5]);
+  dimensions[1] = std::stoi(argv[6]);
+  dimensions[2] = std::stoi(argv[7]);
+
+  bool isLocal = std::atoi(argv[9]) == 0;
+  bool isFile = std::atoi(argv[11]) == 0;
+
+  int nTimes = std::atoi(argv[8]);
 
   std::cout << "EVERYTHING IS OK" << endl;
 
-  Render render = Render(argv[1], spacing, dimensions);
+  std::vector<double> in = {};
+  std::vector<std::string> co = {};
+  std::vector<double> op = {};
 
+  Render render = Render(argv[1], spacing, dimensions, in, co, op, isFile);
+  double *bounds = new double[6];
+  if(isFile){
+    dimensions[0] = render.getImage()->GetDimensions()[0];
+    dimensions[1] = render.getImage()->GetDimensions()[1];
+    dimensions[2] = render.getImage()->GetDimensions()[2];
+  }
+
+  if(isLocal){
+    bounds[0] = 0;
+    bounds[1] = dimensions[0] - 1.0;
+    bounds[2] = 0;
+    bounds[3] = dimensions[1] - 1.0;
+    bounds[4] = 0;
+    bounds[5] = dimensions[2] - 1.0;
+    std::cout << bounds[1] << " " << bounds[3] << " " << bounds[5] << std::endl;
+  }else{
+    bounds = render.getOriginalBounds();
+  }
   renderer->AddVolume(render.getVolume());
   renderer->GetActiveCamera()->Azimuth(45);
   renderer->GetActiveCamera()->Elevation(30);
@@ -57,41 +100,7 @@ int main(int argc, char **argv){
 
   renWin->Render();
 
-  clock_t init;
-  clock_t end;
-
-  for(int k = 0; k < 10; k++){
-    if(k != 0) render.restart();
-    init = clock();
-
-    for(int j = 0; j < 100; j++){
-      for(int i = 1; i <= 10; i++){
-        double bounds[6] = {0, 64/i-1, 0, 64/i-1, 0, 93/i-1};
-        render.extractSelectedVOI(bounds, true);
-        renWin->Render();
-      }
-    }
-
-    end = clock();
-    fileA << double(end - init)/CLOCKS_PER_SEC << "\n";
-
-    render.restart();
-    double *new_bounds = render.getImage()->GetBounds();
-
-    init = clock();
-    for(int j = 0; j < 100; j++){
-      for(int i = 1; i <= 10; i++){
-        double selected[6] = {new_bounds[0], new_bounds[1]/i, new_bounds[2], new_bounds[3]/i, new_bounds[4], new_bounds[5]/i};
-        render.extractSelectedVOI(selected, false);
-        renWin->Render();
-      }
-    }
-    end = clock();
-    fileB << double(end - init)/CLOCKS_PER_SEC << "\n";
-  }
-
-  fileA.close();
-  fileB.close();
+  doBenchmark(render, bounds, nTimes, argv[10], isLocal, renWin);
 
   return EXIT_SUCCESS;
 }

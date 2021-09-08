@@ -2,7 +2,9 @@
 #include "ui_gui.h"
 #include <vector>
 #include <vtkBorderWidget.h>
+#include <vtkTransform.h>
 #include <vtkCommand.h>
+#include <vtkPlanes.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkNamedColors.h>
 #include <vtkNew.h>
@@ -31,16 +33,14 @@ class FpsObserver : public vtkCommand
       double fps = 1/renderer->GetLastRenderTimeInSeconds();
       std::cout << "FPS = "  << fps << endl;
 
-      if(fps < 20){
+      /*if(fps < 50){
         //REFACTOR
         count++;
-        if(count == 5)render.refactor(20/fps + 1);
-      }else if (fps > 60){
-        //REFACTOR
+        if(count == 10)render.refactor(50/fps + 1);
         count = 0;
       }else{
-        count = 0;
-      }
+        count--;
+      }*/
     }
 
     void setRender(Render render){
@@ -50,14 +50,16 @@ class FpsObserver : public vtkCommand
 
 class vtkMyCallback : public vtkCommand
 {
+  private:
+    double* object_bounds = new double[6];
+    double* l_bounds = new double[6];
+    vtkSmartPointer<vtkCubeSource> cube;
+    bool init = false;
+
   public:
     static vtkMyCallback* New(){
       return new vtkMyCallback;
     }
-
-    double* object_bounds = new double[6];
-    double* l_bounds = new double[6];
-    bool init = false;
 
     /*
     This method is call when we manipulate the box.
@@ -66,55 +68,34 @@ class vtkMyCallback : public vtkCommand
     virtual void Execute(vtkObject* caller, unsigned long, void*){
       vtkSmartPointer<vtkBoxWidget2> widget = dynamic_cast<vtkBoxWidget2*>(caller);
       double* bounds = dynamic_cast<vtkBoxRepresentation*>(widget->GetRepresentation())->GetBounds();
-
-      for(int i = 0; i < 6; i++) l_bounds[i] = bounds[i];
-
-      std::cout << "BOX" << endl;
-      std::cout << l_bounds[0] << " " << l_bounds[2] << " " << l_bounds[4] << endl;
-      std::cout << l_bounds[1] << " " << l_bounds[3] << " " << l_bounds[5] << endl;
-      std::cout << "OBJECT" << endl;
-      std::cout << object_bounds[0] << " " << object_bounds[2] << " " << object_bounds[4] << endl;
-      std::cout << object_bounds[1] << " " << object_bounds[3] << " " << object_bounds[5] << endl;
-
-      if(l_bounds[0] < object_bounds[0]) l_bounds[0] = object_bounds[0];
-      if(l_bounds[2] < object_bounds[2]) l_bounds[2] = object_bounds[2];
-      if(l_bounds[4] < object_bounds[4]) l_bounds[4] = object_bounds[4];
-      if(l_bounds[1] > object_bounds[1]) l_bounds[1] = object_bounds[1];
-      if(l_bounds[3] > object_bounds[3]) l_bounds[3] = object_bounds[3];
-      if(l_bounds[5] > object_bounds[5]) l_bounds[5] = object_bounds[5];
-
-    }
-
-    void initBounds(){
-      l_bounds[0] = 0;
-      l_bounds[1] = 0;
-      l_bounds[2] = 0;
-      l_bounds[3] = 0;
-      l_bounds[4] = 0;
-      l_bounds[5] = 0;
+      cube->SetBounds(bounds);
     }
 
     void setBounds(double* bounds){
-        object_bounds[0] = bounds[0];
-        object_bounds[1] = bounds[1];
-        object_bounds[2] = bounds[2];
-        object_bounds[3] = bounds[3];
-        object_bounds[4] = bounds[4];
-        object_bounds[5] = bounds[5];
+        l_bounds[0] = bounds[0];
+        l_bounds[1] = bounds[1];
+        l_bounds[2] = bounds[2];
+        l_bounds[3] = bounds[3];
+        l_bounds[4] = bounds[4];
+        l_bounds[5] = bounds[5];
+    }
+
+    void setCube(vtkSmartPointer<vtkCubeSource> cube){
+      this->cube = cube;
     }
 
     double* GetBounds(){
       return l_bounds;
     }
 
+    void restartCube(){
+      cube->SetBounds(l_bounds);
+    }
 };
 
 class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
 {
-  public:
-    static KeyPressInteractionStyle* New(){
-      return new KeyPressInteractionStyle;
-    }
+  private:
     vtkTypeMacro(KeyPressInteractionStyle, vtkInteractorStyleTrackballCamera);
     vtkSmartPointer<vtkMyCallback> callback;
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
@@ -122,28 +103,43 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     Render render;
     int num_cells;
 
+  public:
+    static KeyPressInteractionStyle* New(){
+      return new KeyPressInteractionStyle;
+    }
+
     virtual void OnKeyPress(){
       vtkRenderWindowInteractor* interactor = this->Interactor;
       std::string key = interactor->GetKeySym();
-      double* bounds = callback->GetBounds();
+
+      vtkSmartPointer<vtkPlanes> transform = vtkSmartPointer<vtkPlanes>::New();
+      dynamic_cast<vtkBoxRepresentation*>(boxWidget->GetRepresentation())->GetPlanes(transform);
+      double* bounds = boxWidget->GetRepresentation()->GetBounds();
+
+      std::cout << "BOUNDS: " << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
 
       if(key == "j"){
         std::cout << "SE HA PULSADO?? " << key << endl;
-
         render.extractSelectedVOI(bounds, false);
-
       }
       else if(key == "s"){
         double radius = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
-        std::cout << radius << endl;
         double center[3];
         center[0] = (bounds[1] + bounds[0])/2;
         center[1] = (bounds[3] + bounds[2])/2;
         center[2] = (bounds[5] + bounds[4])/2;
-        render.extractFormedVOI(0, bounds, center, radius, nullptr);
+        cout << "CENTER: " << center[0] << " " << center[1] << " " << center[2] << endl;
+        render.extractFormedVOI(0, bounds, center, radius, transform);
       }
       else if(key == "r"){
         render.restart();
+        restartCube();
+      }
+      else if(key == "x"){
+        render.extractFormedVOI(1, bounds, nullptr, 0, transform);
+      }
+      else if(key == "c"){
+        restartCube();
       }
       renWin->Render();
     }
@@ -168,6 +164,12 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
 
     void SetRenWin(vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin){
       this->renWin = renWin;
+    }
+
+    void restartCube(){
+      callback->restartCube();
+      boxWidget->GetRepresentation()->PlaceWidget(callback->GetBounds());
+
     }
 };
 
@@ -206,8 +208,8 @@ gui::gui(QWidget *parent)
 
     std::cout << "OK2" << endl;
 
-    renWin->SetSize(600, 600);
-    renWin->SetWindowName("SimpleRayCast");
+    //renWin->SetSize(600, 600);
+    //renWin->SetWindowName("VolumeVisualization");
 
     std::cout << "OK3" << endl;
 
@@ -270,23 +272,6 @@ void gui::openFile(){
   }
 }
 
-bool gui::isANumber(std::string text){
-  bool isNumber = !text.empty();
-  int nComas = 0;
-
-  std::string::iterator it = text.begin();
-  for(; it != text.end() && isNumber; it++){
-    isNumber = std::isdigit(*it) || *it == ',';
-    if(*it == ',') nComas++;
-  }
-
-  if(nComas > 1) isNumber = false;
-
-  if(isNumber) cout << "still a number" << endl;
-  else cout << "not a number" << endl;
-  return isNumber;
-}
-
 void gui::addFunctionValue(){
   std::string iText = this->ui->intText->text().toUtf8().data();
   std::string cText = this->ui->colorText->text().toUtf8().data();
@@ -294,13 +279,11 @@ void gui::addFunctionValue(){
 
   std::cout << "intensity: " << iText << " color: " << cText << " opacity: " << oText << endl;
 
-  if(isANumber(iText) && isANumber(oText)){
-    std::cout << "let's do some things" << endl;
-    if(!iText.empty() && !cText.empty() && !oText.empty()){
-      render.addFunctionValue(std::stod(iText), cText, std::stod(oText));
-      renWin->Render();
-    }
+  if(!iText.empty() && !cText.empty() && !oText.empty()){
+    render.addFunctionValue(std::stod(iText), cText, std::stod(oText));
+    renWin->Render();
   }
+
   //std::string text = this->ui->funcValues->plainText().toUtf8().data();
   //text = text + "[" + iText + " " + cText + " " + oText + "]\n";
 }
@@ -348,16 +331,26 @@ void gui::loadFile(){
 
   this->ui->infoText->setText(string.c_str());
 
+  representation = vtkSmartPointer<vtkBoxRepresentation>::New();
+  representation->SetPlaceFactor(1);
+  representation->PlaceWidget(render.getVolume()->GetBounds());
+
   vtkNew<vtkBoxWidget2> boxWidget;
   boxWidget->SetInteractor(this->ui->qvtkWidget->interactor());
-  boxWidget->RotationEnabledOff();
   boxWidget->TranslationEnabledOn();
-  boxWidget->GetRepresentation()->SetPlaceFactor(1);
-  boxWidget->GetRepresentation()->PlaceWidget(render.getVolume()->GetBounds());
+  boxWidget->SetRepresentation(representation);
+
+  //boxWidget->GetRepresentation()->SetPlaceFactor(1);
+  //boxWidget->GetRepresentation()->PlaceWidget(render.getVolume()->GetBounds());
 
   vtkSmartPointer<vtkMyCallback> callback = vtkSmartPointer<vtkMyCallback>::New();
   callback->setBounds(render.getVolume()->GetBounds());
-  callback->initBounds();
+  //callback->initBounds();
+
+  cube = vtkSmartPointer<vtkCubeSource>::New();
+  cube->SetBounds(render.getVolume()->GetBounds());
+
+  callback->setCube(cube);
 
   vtkNew<KeyPressInteractionStyle> key;
   key->SetCallback(callback);
@@ -383,16 +376,16 @@ void gui::loadFile(){
     renderer->AddActor(polyActor);
   }
 
-  /*vtkNew<vtkPolyDataMapper> polyMapper;
-  polyMapper->SetInputData(render.getOctreeRepresentation());
+  vtkNew<vtkPolyDataMapper> cubeMapper;
+  cubeMapper->SetInputConnection(cube->GetOutputPort());
 
-  vtkNew<vtkActor> octreeActor;
-  octreeActor->SetMapper(polyMapper);
-  octreeActor->GetProperty()->SetInterpolationToFlat();
-  octreeActor->GetProperty()->SetOpacity(0.2);
-  octreeActor->GetProperty()->SetColor(
-    colors->GetColor4d("green").GetData()
-  );*/
+  vtkNew<vtkActor> cubeActor;
+  cubeActor->SetMapper(cubeMapper);
+  cubeActor->GetProperty()->EdgeVisibilityOn();
+  cubeActor->GetProperty()->SetOpacity(1);
+  cubeActor->GetProperty()->SetRepresentationToWireframe();
+
+  renderer->AddActor(cubeActor);
 
   vtkSmartPointer<FpsObserver> fps = vtkSmartPointer<FpsObserver>::New();
   renderer->AddObserver(vtkCommand::EndEvent, fps);

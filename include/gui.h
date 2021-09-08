@@ -6,6 +6,8 @@
 
 #include "Render.h"
 #include "openfile.h"
+#include <vtkBoxRepresentation.h>
+#include <vtkCubeSource.h>
 
 class gui;
 
@@ -26,15 +28,16 @@ private slots:
     void addFunctionValue();
     void removeFunctionValue();
 private:
+    vtkSmartPointer<vtkBoxRepresentation> representation;
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
-    vtkSmartPointer<vtkImageShrink3D> shrink;
     vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper;
+    vtkSmartPointer<vtkCubeSource> cube;
     Render render;
     OpenFile *op;
     bool automatic = true;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
     vtkSmartPointer<vtkRenderer> renderer;
     Ui::gui *ui;
-    bool isANumber(std::string text);
+    //bool isANumber(std::string text);
 };
 #endif // GUI_H

@@ -4,9 +4,9 @@ PROJECT(Benchmark)
 
 find_package(VTK REQUIRED)
 
-include_directories(../)
+include_directories(../include ../src)
 
-add_executable(benchmark benchmark.cxx ../Render.h ../Render.cxx)
+add_executable(benchmark benchmark.cxx ../include/Render.h ../src/Render.cxx)
 
 if(VTK_LIBRARIES)
   target_link_libraries(benchmark ${VTK_LIBRARIES})

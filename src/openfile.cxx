@@ -70,12 +70,7 @@ void OpenFile::accept(){
   std::string file = "";
   std::string dir = "";
 
-  //std::string file = this->ui->FileSelection->toPlainText().toUtf8().data();
-  //std::string dir = this->ui->DirSelection->toPlainText().toUtf8().data();
-
-  std::cout << "HASTA AQUI BIEN\n";
-
-  if(!this->ui->FileSelection->toPlainText().isEmpty()){
+   if(!this->ui->FileSelection->toPlainText().isEmpty()){
     file = this->ui->FileSelection->toPlainText().toUtf8().data();
     this->file = true;
   }else if(!this->ui->DirSelection->toPlainText().isEmpty()){
@@ -83,15 +78,11 @@ void OpenFile::accept(){
     this->file = false;
   }
 
-  std::cout << "GetValueFromTextFields\n";
-
   if(!file.empty()){
     path = strcpy(path, file.c_str());
   }else if(!dir.empty()){
     path = strcpy(path, dir.c_str());
   }
-
-  std::cout << "STILL FINE\n";
 
   for(int i = 0; i < intensities.size(); i++){
     std::cout << intensities.at(i) << " " << colors.at(i) << " " << opacities.at(i) << std::endl;
