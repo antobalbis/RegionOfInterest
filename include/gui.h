@@ -20,13 +20,14 @@ class gui : public QMainWindow
 public:
     explicit gui(QWidget *parent = nullptr);
     virtual ~gui();
-
+    void updateField(double *bounds);
 private slots:
-    void handleButton();
+    void applyROI();
     void openFile();
     void loadFile();
     void addFunctionValue();
     void removeFunctionValue();
+
 private:
     vtkSmartPointer<vtkBoxRepresentation> representation;
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
@@ -38,6 +39,7 @@ private:
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
     vtkSmartPointer<vtkRenderer> renderer;
     Ui::gui *ui;
+
     //bool isANumber(std::string text);
 };
 #endif // GUI_H

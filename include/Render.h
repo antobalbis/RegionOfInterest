@@ -66,7 +66,7 @@ class Render{
     void extractTransformedBox(double *bounds, double *center, vtkSmartPointer<vtkPlanes> planes);
     void doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double *bounds, int type);
     double *getLocalBounds(double *bounds);
-    vtkSmartPointer<vtkOctreePointLocatorNode> getOctreeBounds(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level);
+    vtkSmartPointer<vtkOctreePointLocatorNode> getOctreeNode(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level);
     void createOctreeNodes(vtkSmartPointer<vtkOctreePointLocatorNode> node, int level, int maxLevel);
     void computeNodeBounds(int index, vtkSmartPointer<vtkOctreePointLocatorNode> node, double* parentBounds);
     bool compareNodes(vtkSmartPointer<vtkOctreePointLocatorNode> _node);

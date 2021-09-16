@@ -89,7 +89,7 @@ Render::Render(std::string path, double spacing[3], int dims[3], std::vector<dou
   if(intensities.size() > 0){
     //Extract contour (surface representation) of the object withing the volume.
     vtkNew<vtkContourFilter> contourFilter;
-    contourFilter->SetInputData(current->GetOutput());
+    contourFilter->SetInputData(original);
     contourFilter->SetValue(0, intensities[0]);
     contourFilter->SetValue(1, intensities[1]);
     contourFilter->Update();
@@ -133,6 +133,8 @@ Render::Render(std::string path, double spacing[3], int dims[3], std::vector<dou
   volume = vtkSmartPointer<vtkVolume>::New();
   volume->SetMapper(volumeMapper);
   volume->SetProperty(volumeProperty);
+
+  std::cout << "DIMENSIONES: " << current->GetOutput()->GetDimensions()[0] << " " << current->GetOutput()->GetDimensions()[1] << " " << current->GetOutput()->GetDimensions()[2] << std::endl;
 }
 
 //Method to read data from a number of files, we define the directory path and
@@ -149,7 +151,7 @@ void Render::readDataFromDir(const char* path, int x_dim, int y_dim, int z_dim, 
   original = reader->GetOutput();
   current = vtkSmartPointer<vtkImageShrink3D>::New();
   current->SetInputConnection(reader->GetOutputPort());
-  int factor = original->GetActualMemorySize()/(512*1024) + 1;
+  int factor = 1;
   current->SetShrinkFactors(factor, factor, factor);
   current->Update();
 }
@@ -162,7 +164,7 @@ void Render::readDICOMImage(const char* path, int x_dim, int y_dim, int z_dim, i
   original = reader->GetOutput();
   current = vtkSmartPointer<vtkImageShrink3D>::New();
   current->SetInputConnection(reader->GetOutputPort());
-  factor = original->GetActualMemorySize()/(512*1024) + 1;
+  factor = 1;
   current->SetShrinkFactors(factor, factor, factor);
   current->Update();
 }
@@ -221,7 +223,7 @@ void Render::readNrrdImage(const char *path){
   original = reader->GetOutput();
   current = vtkSmartPointer<vtkImageShrink3D>::New();
   current->SetInputConnection(reader->GetOutputPort());
-  factor = original->GetActualMemorySize()/(512*1024) + 1;
+  factor = 1;
   current->SetShrinkFactors(factor, factor, factor);
   current->Update();
 }
@@ -243,7 +245,7 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
     std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
 
 
-    vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeBounds(bounds, root, 0);
+    vtkSmartPointer<vtkOctreePointLocatorNode> node_ = getOctreeNode(bounds, root, 0);
     bool same = compareNodes(node_);
     std::cout << "LEVEL = " << level << endl;
 
@@ -276,7 +278,9 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
       }
 
     }else if(!same){
-      std::cout << "IS NOT THE SAME" << endl;
+      selected[0] = root;
+      selected[1] = root;
+      //std::cout << "IS NOT THE SAME" << endl;
       bounds_[0] = node_->GetMinBounds()[0];
       bounds_[2] = node_->GetMinBounds()[1];
       bounds_[4] = node_->GetMinBounds()[2];
@@ -284,17 +288,16 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
       bounds_[3] = node_->GetMaxBounds()[1];
       bounds_[5] = node_->GetMaxBounds()[2];
 
-      //std::cout << "OCTREE NODE BOUNDS: " << endl;
-      std::cout << _bounds[0] << " " << _bounds[1] << " " << _bounds[2] << " " << _bounds[3] << " " << _bounds[4] << " " << _bounds[5] << endl;
-      bounds_ = getLocalBounds(bounds_);
+      std::cout << "OCTREE NODE BOUNDS: " << endl;
+      std::cout << bounds_[0] << " " << bounds_[1] << " " << bounds_[2] << " " << bounds_[3] << " " << bounds_[4] << " " << bounds_[5] << endl;
 
-      vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds_, original);
+      vtkSmartPointer<vtkExtractVOI> voi = extractVOI(getLocalBounds(bounds_), original);
       current->SetInputConnection(voi->GetOutputPort());
       current->Update();
       //volumeMapper->SetInputConnection(voi->GetOutputPort());
     }
 
-    std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
+    std::cout << "NEW DIMENSIONS: " << current->GetOutput()->GetDimensions()[0] << " " << current->GetOutput()->GetDimensions()[1] << " "  << current->GetOutput()->GetDimensions()[2] << " "  << endl;
 
     vtkSmartPointer<vtkBox> box = vtkSmartPointer<vtkBox>::New();
     box->SetBounds(bounds);
@@ -302,13 +305,17 @@ void Render::extractSelectedVOI(double bounds[6], bool localBounds){
 
   }else{
     vtkSmartPointer<vtkExtractVOI> voi = extractVOI(bounds, original);
+    factor = 1;
     current->SetInputConnection(voi->GetOutputPort());
+    current->SetShrinkFactors(factor, factor, factor);
     current->Update();
     //volumeMapper->SetInputConnection(voi->GetOutputPort());
   }
 }
 
 vtkSmartPointer<vtkExtractVOI> Render::extractVOI(double bounds[6], vtkSmartPointer<vtkImageData> dataSet){
+  this->factor = 1;
+  current->SetShrinkFactors(this->factor, this->factor, this->factor);
   vtkSmartPointer<vtkExtractVOI> voi = vtkSmartPointer<vtkExtractVOI>::New();
   voi->SetInputData(dataSet);
   voi->SetVOI((int) bounds[0], (int) bounds[1], (int) bounds[2], (int) bounds[3], (int) bounds[4], (int) bounds[5]);
@@ -362,7 +369,9 @@ void Render::doExtraction(vtkSmartPointer<vtkImplicitFunction> function, double 
 }
 
 void Render::restart(){
+  this->factor = 1;
   current->SetInputData(original);
+  current->SetShrinkFactors(1, 1, 1);
   current->Update();
 
   node = root;
@@ -402,7 +411,7 @@ double *Render::getLocalBounds(double *bounds){
   return _bounds;
 }
 
-vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level){
+vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeNode(double *bounds, vtkSmartPointer<vtkOctreePointLocatorNode> node, int level){
     double points[2][3];
     double *_bounds;
     bool inside = true;
@@ -424,9 +433,12 @@ vtkSmartPointer<vtkOctreePointLocatorNode> Render::getOctreeBounds(double *bound
         return node;
       }else{
         for(int i = 0; i < 8; i++){
-          if (getOctreeBounds(bounds, node->GetChild(i), level + 1) != nullptr){
-            return node->GetChild(i);
-          }
+          vtkSmartPointer<vtkOctreePointLocatorNode> _node = getOctreeNode(bounds, node->GetChild(i), level + 1);
+            std::cout << "RETURN NODE" << endl;
+            if(_node != nullptr){
+              if(level > this->level) this->level = level;
+              return _node;
+            }
         }
         this->level = level;
         return node;
@@ -494,7 +506,9 @@ void Render::removeFunctionValue(double intensity){
 }
 
 void Render::refactor(int factor){
-  current->SetShrinkFactors(factor, factor, factor);
+  std::cout << "REFACTORIZAMOS MODELO " << std::endl;
+  this->factor += factor;
+  current->SetShrinkFactors(this->factor, this->factor, this->factor);
   current->Update();
   //volumeMapper->SetInputConnection(shrink2->GetOutputPort());
 }

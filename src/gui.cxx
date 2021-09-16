@@ -21,30 +21,34 @@
 
 class FpsObserver : public vtkCommand
 {
+  private:
+    int count = 0;
+    Render render;
   public:
     static FpsObserver* New(){
       return new FpsObserver;
     }
-    int count = 0;
-    Render render;
+
 
     virtual void Execute(vtkObject* caller, unsigned long, void*){
       vtkSmartPointer<vtkRenderer> renderer = dynamic_cast<vtkRenderer*>(caller);
       double fps = 1/renderer->GetLastRenderTimeInSeconds();
       std::cout << "FPS = "  << fps << endl;
 
-      /*if(fps < 50){
+      if (fps < 20){
         //REFACTOR
         count++;
-        if(count == 10)render.refactor(50/fps + 1);
-        count = 0;
-      }else{
+        if(count == 10)render.refactor(1);
+      }else if(count > 0){
         count--;
-      }*/
+      }
     }
 
     void setRender(Render render){
       this->render = render;
+    }
+    void resetCounter(){
+      count = 0;
     }
 };
 
@@ -100,8 +104,10 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     vtkSmartPointer<vtkMyCallback> callback;
     vtkSmartPointer<vtkBoxWidget2> boxWidget;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin;
+    Ui::gui *ui;
     Render render;
     int num_cells;
+    FpsObserver observer;
 
   public:
     static KeyPressInteractionStyle* New(){
@@ -122,6 +128,8 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
       if(key == "j"){
         std::cout << "SE HA PULSADO?? " << key << endl;
         render.extractSelectedVOI(bounds, false);
+        updateFields(bounds);
+        observer.resetCounter();
       }
       else if(key == "e"){
         double radius = {getMin((bounds[1] - bounds[0])/2, (bounds[3] - bounds[2])/2, (bounds[5] - bounds[4])/2)};
@@ -131,17 +139,23 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
         center[2] = (bounds[5] + bounds[4])/2;
         cout << "CENTER: " << center[0] << " " << center[1] << " " << center[2] << endl;
         render.extractFormedVOI(0, bounds, center, radius, transform);
+        updateFields(bounds);
       }
       else if(key == "r"){
         render.restart();
         restartCube();
+        updateFields(render.getOriginalBounds());
+        observer.resetCounter();
       }
       else if(key == "x"){
         render.extractFormedVOI(1, bounds, nullptr, 0, transform);
       }
       else if(key == "c"){
         restartCube();
+      }else if(key == "p"){
+        render.refactor(1);
       }
+
       renWin->Render();
     }
 
@@ -170,7 +184,22 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     void restartCube(){
       callback->restartCube();
       boxWidget->GetRepresentation()->PlaceWidget(callback->GetBounds());
+    }
+    void setUI(Ui::gui *ui){
+      this->ui = ui;
+    }
 
+    void setObserver(FpsObserver observer){
+      this->observer = observer;
+    }
+
+    void updateFields(double* bounds){
+      this->ui->iText->setText(std::to_string(bounds[0]).c_str());
+      this->ui->jText->setText(std::to_string(bounds[2]).c_str());
+      this->ui->kText->setText(std::to_string(bounds[4]).c_str());
+      this->ui->lengthText->setText(std::to_string(bounds[1]).c_str());
+      this->ui->widthText->setText(std::to_string(bounds[3]).c_str());
+      this->ui->depthText->setText(std::to_string(bounds[5]).c_str());
     }
 };
 
@@ -216,7 +245,7 @@ gui::gui(QWidget *parent)
 
     //this->ui->qvtkWidget->renderWindow()->AddRenderer(renderer);
 
-    connect(this->ui->pushButton, SIGNAL(released()), this, SLOT(handleButton()));
+    connect(this->ui->pushButton, SIGNAL(released()), this, SLOT(applyROI()));
     connect(this->ui->openButton, SIGNAL(released()), this, SLOT(openFile()));
     connect(this->ui->addButton, SIGNAL(released()), this, SLOT(addFunctionValue()));
     connect(this->ui->deleteButton, SIGNAL(released()), this, SLOT(removeFunctionValue()));
@@ -236,7 +265,7 @@ gui::gui(QWidget *parent)
     this->ui->colorsList->document()->setPlainText(QString::fromUtf8(colors_.c_str()));
 }
 
-void gui::handleButton(){
+void gui::applyROI(){
   double initI = std::stod(this->ui->iText->text().toUtf8().constData());
   double initJ = std::stod(this->ui->jText->text().toUtf8().constData());
   double initK = std::stod(this->ui->kText->text().toUtf8().constData());
@@ -332,6 +361,14 @@ void gui::loadFile(){
 
   this->ui->infoText->setText(string.c_str());
 
+  this->ui->iText->setText(std::to_string(bounds[0]).c_str());
+  this->ui->jText->setText(std::to_string(bounds[2]).c_str());
+  this->ui->kText->setText(std::to_string(bounds[4]).c_str());
+  this->ui->lengthText->setText(std::to_string(bounds[1]).c_str());
+  this->ui->widthText->setText(std::to_string(bounds[3]).c_str());
+  this->ui->depthText->setText(std::to_string(bounds[5]).c_str());
+
+
   representation = vtkSmartPointer<vtkBoxRepresentation>::New();
   representation->SetPlaceFactor(1);
   representation->PlaceWidget(render.getVolume()->GetBounds());
@@ -359,6 +396,7 @@ void gui::loadFile(){
   key->SetCurrentRenderer(renderer);
   key->SetRender(render);
   key->SetRenWin(renWin);
+  key->setUI(this->ui);
 
   this->ui->qvtkWidget->interactor()->SetInteractorStyle(key);
   boxWidget->AddObserver(vtkCommand::InteractionEvent, callback);
@@ -389,6 +427,7 @@ void gui::loadFile(){
   renderer->AddActor(cubeActor);
 
   vtkSmartPointer<FpsObserver> fps = vtkSmartPointer<FpsObserver>::New();
+  fps->setRender(this->render);
   renderer->AddObserver(vtkCommand::EndEvent, fps);
   renderer->AddVolume(render.getVolume());
   renderer->SetBackground(colors->GetColor3d("Wheat").GetData());
@@ -397,6 +436,15 @@ void gui::loadFile(){
   renderer->ResetCameraClippingRange();
   renderer->ResetCamera();
   renWin->Render();
+}
+
+void gui::updateField(double *bounds){
+  this->ui->iText->setText(std::to_string(bounds[0]).c_str());
+  this->ui->jText->setText(std::to_string(bounds[2]).c_str());
+  this->ui->kText->setText(std::to_string(bounds[4]).c_str());
+  this->ui->lengthText->setText(std::to_string(bounds[1]).c_str());
+  this->ui->widthText->setText(std::to_string(bounds[3]).c_str());
+  this->ui->depthText->setText(std::to_string(bounds[5]).c_str());
 }
 
 gui::~gui()
