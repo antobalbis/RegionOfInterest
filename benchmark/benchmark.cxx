@@ -19,12 +19,14 @@ void doBenchmark(Render render, double *bounds, int nTimes, char* path, bool ver
   std::ofstream file;
   file.open(path);
 
-  for(int k = 0; k < 20; k++){
+  std::cout << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
+
+  for(int k = 0; k < 10; k++){
     if(k != 0) render.restart();
     init = clock();
 
-    for(int i = 1; i <= nTimes; i++){
-      double bounds_[6] = {bounds[0], bounds[1]/i-1, bounds[2], bounds[3]/i-1, bounds[4], bounds[5]/i-1};
+    for(int i = 1; i < nTimes; i++){
+      double bounds_[6] = {bounds[0], bounds[1]/(nTimes-(nTimes-i)), bounds[2], bounds[3]/(nTimes-(nTimes-i)), bounds[4], bounds[5]/(nTimes-(nTimes-i))};
       render.extractSelectedVOI(bounds_, version1);
       window->Render();
     }
