@@ -510,6 +510,8 @@ void Render::refactor(int factor){
   this->factor += factor;
   current->SetShrinkFactors(this->factor, this->factor, this->factor);
   current->Update();
+  int *dims = current->GetOutput()->GetDimensions();
+  std::cout << "DIMENSIONS: " << dims[0] << " " << dims[1] << " " << dims[2] << std::endl;
   //volumeMapper->SetInputConnection(shrink2->GetOutputPort());
 }
 

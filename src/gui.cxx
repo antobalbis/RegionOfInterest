@@ -117,6 +117,7 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
     virtual void OnKeyPress(){
       vtkRenderWindowInteractor* interactor = this->Interactor;
       std::string key = interactor->GetKeySym();
+      std::cout << "SE HA PULSADO?? " << key << endl;
       double* bounds = boxWidget->GetRepresentation()->GetBounds();
 
       vtkSmartPointer<vtkPlanes> transform = vtkSmartPointer<vtkPlanes>::New();
@@ -126,7 +127,6 @@ class KeyPressInteractionStyle : public vtkInteractorStyleTrackballCamera
       std::cout << "BOUNDS: " << bounds[0] << " " << bounds[1] << " " << bounds[2] << " " << bounds[3] << " " << bounds[4] << " " << bounds[5] << endl;
 
       if(key == "j"){
-        std::cout << "SE HA PULSADO?? " << key << endl;
         render.extractSelectedVOI(bounds, false);
         updateFields(bounds);
         observer.resetCounter();
@@ -214,9 +214,8 @@ gui::gui(QWidget *parent)
 
     vtkNew<vtkNamedColors> colors;
 
-    renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
-
-    this->ui->qvtkWidget->setRenderWindow(renWin);
+    //renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+    //this->ui->qvtkWidget->setRenderWindow(renWin);
 
     //vtkNew<vtkPolyDataMapper> octreeMapper;
     //octreeMapper->SetInputData(render.getOctreeRepresentation());
@@ -325,6 +324,8 @@ void gui::removeFunctionValue(){
 }
 
 void gui::loadFile(){
+  renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+  this->ui->qvtkWidget->setRenderWindow(renWin);
 
   renderer = vtkSmartPointer<vtkRenderer>::New();
   renWin->AddRenderer(renderer);
@@ -367,7 +368,6 @@ void gui::loadFile(){
   this->ui->lengthText->setText(std::to_string(bounds[1]).c_str());
   this->ui->widthText->setText(std::to_string(bounds[3]).c_str());
   this->ui->depthText->setText(std::to_string(bounds[5]).c_str());
-
 
   representation = vtkSmartPointer<vtkBoxRepresentation>::New();
   representation->SetPlaceFactor(1);
